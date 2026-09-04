@@ -201,6 +201,7 @@
     window.resultadoExtracaoDOU = { 1: null, 2: null, 3: null };
     window.candidatosDOU = { 1: [], 2: [], 3: [] };
     window.publicacoesDOU = { 1: [], 2: [], 3: [] };
+    window.relevantesDOU = { 1: [], 2: [], 3: [] };
 
     function mostrarNomeArquivo(input, elemento) {
       if (!input.files[0]) {
@@ -248,6 +249,7 @@
         <div id="resumoFinal"></div>
         <div id="resultadoCandidatos"></div>
         <div id="resultadoPublicacoes"></div>
+        <div id="resultadoRelevancia"></div>
       `;
     }
 
@@ -1391,6 +1393,578 @@
     }
 
 
+
+    // ============================================================
+    // MIGRAÇÃO DO NODE:
+    // CODE - CLASSIFICAR RELEVÂNCIA
+    // ============================================================
+
+    function normalizarRelevancia(texto) {
+      return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\r/g, '')
+        .replace(/[ \t]+/g, ' ')
+        .toUpperCase()
+        .trim();
+    }
+
+    function mencionaANTT(texto) {
+      const n = normalizarRelevancia(texto);
+
+      return (
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(n) ||
+        /\bANTT\b/.test(n) ||
+        /GOV\.BR\/ANTT/.test(n) ||
+        /@ANTT\.GOV\.BR/.test(n)
+      );
+    }
+
+    function ehTituloSecao3(titulo) {
+      const n = normalizarRelevancia(titulo);
+
+      return (
+        /^EXTRATO\b/.test(n) ||
+        /^EXTRATOS\b/.test(n) ||
+        /^EDITAL\b/.test(n) ||
+        /^EDITAIS\b/.test(n) ||
+        /^AVISO\b/.test(n) ||
+        /^AVISOS\b/.test(n) ||
+        /^COMUNICADO\b/.test(n) ||
+        /^COMUNICADOS\b/.test(n) ||
+        /^RESULTADO\b/.test(n) ||
+        /^RESULTADOS\b/.test(n) ||
+        /^RETIFICACAO\b/.test(n)
+      );
+    }
+
+    function cabecalhoIdentificaANTT(cabecalho) {
+      const titulo = normalizarRelevancia(cabecalho);
+
+      if (!ehTituloSecao3(titulo)) {
+        return false;
+      }
+
+      if (/\bANTT\b/.test(titulo)) {
+        return true;
+      }
+
+      const siglasANTT = [
+        /\bSUROD\b/,
+        /\bSUROC\b/,
+        /\bSUPAS\b/,
+        /\bSUFER\b/,
+        /\bSUESP\b/,
+        /\bSUDEG\b/,
+        /\bSUSPI\b/,
+        /\bGEAUT\b/
+      ];
+
+      if (
+        siglasANTT.some(
+          regex => regex.test(titulo)
+        )
+      ) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function inicioIdentificaAutoriaANTT(
+      cabecalho,
+      corpo
+    ) {
+      const textoInicial =
+        normalizarRelevancia(
+          `${cabecalho}\n${corpo}`
+        ).slice(
+          0,
+          1500
+        );
+
+      const padroesInicio = [
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}TORNA PUBLICO/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}NO USO DE SUAS ATRIBUICOES/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}NOTIFICA/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}COMUNICA/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}INFORMA/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,350}FAZ SABER/
+      ];
+
+      return padroesInicio.some(
+        regex =>
+          regex.test(textoInicial)
+      );
+    }
+
+    function identificarANTTDireto(
+      secao,
+      cabecalho,
+      corpo,
+      conteudo,
+      contextoANTT
+    ) {
+      const titulo =
+        normalizarRelevancia(cabecalho);
+
+      const texto =
+        normalizarRelevancia(
+          `${cabecalho}\n${corpo}\n${conteudo}`
+        );
+
+      if (
+        contextoANTT === true
+      ) {
+        return true;
+      }
+
+      if (
+        String(secao) === '1'
+      ) {
+        const padroesSecao1 = [
+          /^DELIBERACAO ANTT Nº/,
+          /^RESOLUCAO ANTT Nº/,
+          /^INSTRUCAO NORMATIVA ANTT Nº/,
+          /^PORTARIA ANTT Nº/,
+          /^PORTARIA SUSPI Nº/,
+          /^PORTARIA SUROD Nº/,
+          /^PORTARIA SUPAS Nº/,
+          /^PORTARIA SUFER Nº/,
+          /^PORTARIA SUDEG Nº/,
+          /^DECISAO SUROD Nº/,
+          /^DECISAO SUROC Nº/,
+          /^DECISAO SUFER Nº/,
+          /^DECISAO SUPAS Nº/,
+          /^DECISAO SUESP Nº/
+        ];
+
+        if (
+          padroesSecao1.some(
+            regex =>
+              regex.test(titulo)
+          )
+        ) {
+          return true;
+        }
+      }
+
+      const autoriaANTT = [
+        /DIRETORIA COLEGIADA DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/,
+        /DIRETOR-GERAL DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/,
+        /DIRETOR GERAL DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/,
+        /DIRETOR-GERAL DA ANTT/,
+        /DIRETOR GERAL DA ANTT/,
+        /SUPERINTENDENTE DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/,
+        /SUPERINTENDENTE DE .* DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/,
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES\s*-\s*ANTT.{0,250}NO USO DE SUAS ATRIBUICOES/
+      ];
+
+      if (
+        autoriaANTT.some(
+          regex =>
+            regex.test(texto)
+        )
+      ) {
+        return true;
+      }
+
+      if (
+        String(secao) === '3'
+      ) {
+        if (
+          cabecalhoIdentificaANTT(
+            titulo
+          )
+        ) {
+          return true;
+        }
+
+        if (
+          inicioIdentificaAutoriaANTT(
+            cabecalho,
+            corpo
+          )
+        ) {
+          return true;
+        }
+
+        const camposANTT = [
+          /CONTRATANTE\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
+          /CONCEDENTE\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
+          /CONVENENTE\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
+          /ORGAO RESPONSAVEL\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
+          /UNIDADE GESTORA\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
+          /INTERESSADO\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/
+        ];
+
+        if (
+          camposANTT.some(
+            regex =>
+              regex.test(texto)
+          )
+        ) {
+          return true;
+        }
+
+        if (
+          ehTituloSecao3(titulo) &&
+          /DIRETORIA COLEGIADA DA AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto)
+        ) {
+          return true;
+        }
+      }
+
+      if (
+        String(secao) === '2'
+      ) {
+        if (
+          mencionaANTT(texto) &&
+          (
+            /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) ||
+            /DIRETOR-GERAL DA ANTT/.test(texto) ||
+            /DIRETOR GERAL DA ANTT/.test(texto)
+          )
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function classificarRelevanciaPublicacoes(
+      publicacoes
+    ) {
+      const saida = [];
+
+      for (
+        const item of publicacoes
+      ) {
+        const secao =
+          String(
+            item.secao || ''
+          );
+
+        const cabecalho =
+          String(
+            item.cabecalho ||
+            item.cabecalho_detectado ||
+            ''
+          );
+
+        const corpo =
+          String(
+            item.corpo || ''
+          );
+
+        const conteudo =
+          String(
+            item.conteudo ||
+            `${cabecalho}\n${corpo}`
+          );
+
+        const contextoOrgao =
+          String(
+            item.contexto_orgao || ''
+          );
+
+        const contextoANTT =
+          item.contexto_antt === true;
+
+        const temMencaoANTT =
+          mencionaANTT(
+            conteudo
+          );
+
+        const anttDireto =
+          identificarANTTDireto(
+            secao,
+            cabecalho,
+            corpo,
+            conteudo,
+            contextoANTT
+          );
+
+        let classificacao =
+          'NAO_RELEVANTE';
+
+        let relevancia =
+          'DESCARTAR';
+
+        let motivo =
+          'Publicação sem vínculo identificado com a ANTT.';
+
+        if (
+          anttDireto
+        ) {
+          classificacao =
+            'ANTT_DIRETO';
+
+          relevancia =
+            'RELEVANTE';
+
+          if (
+            contextoANTT
+          ) {
+            motivo =
+              'Publicação vinculada ao contexto institucional da ANTT.';
+          } else {
+            motivo =
+              'Publicação identificada como ato direto da ANTT.';
+          }
+        }
+
+        else if (
+          temMencaoANTT
+        ) {
+          classificacao =
+            'OUTRO_ORGAO_CITA_ANTT';
+
+          relevancia =
+            'RELEVANTE';
+
+          motivo =
+            contextoOrgao
+              ? `Publicação de outro órgão que menciona a ANTT. Contexto: ${contextoOrgao}`
+              : 'Publicação de outro órgão que menciona a ANTT.';
+        }
+
+        else {
+          const tituloNormalizado =
+            normalizarRelevancia(
+              cabecalho
+            );
+
+          if (
+            tituloNormalizado === 'RETIFICACAO' ||
+            tituloNormalizado === 'SUMULA'
+          ) {
+            classificacao =
+              'NAO_RELEVANTE';
+
+            relevancia =
+              'DESCARTAR';
+
+            if (
+              contextoOrgao
+            ) {
+              motivo =
+                `Retificação ou súmula sem menção à ANTT. Contexto: ${contextoOrgao}`;
+            } else {
+              motivo =
+                'Retificação ou súmula sem menção à ANTT.';
+            }
+          }
+        }
+
+        const resultado = {
+          ...item,
+          menciona_antt:
+            temMencaoANTT,
+          antt_direto:
+            anttDireto,
+          classificacao,
+          relevancia,
+          motivo
+        };
+
+        if (
+          resultado.relevancia === 'RELEVANTE' ||
+          resultado.relevancia === 'ANALISAR'
+        ) {
+          saida.push(
+            resultado
+          );
+        }
+      }
+
+      return saida;
+    }
+
+    function mostrarResultadoRelevancia() {
+      const r1 =
+        window.relevantesDOU[1];
+
+      const r2 =
+        window.relevantesDOU[2];
+
+      const r3 =
+        window.relevantesDOU[3];
+
+      const total =
+        r1.length +
+        r2.length +
+        r3.length;
+
+      function contarTipo(
+        lista,
+        tipo
+      ) {
+        return lista.filter(
+          item =>
+            item.classificacao === tipo
+        ).length;
+      }
+
+      function amostra(
+        lista
+      ) {
+        return lista
+          .slice(
+            0,
+            12
+          )
+          .map(
+            item => `
+              <div>
+                <strong>
+                  ${item.indice}
+                </strong>
+                —
+                ${escaparHTML(
+                  item.cabecalho
+                )}
+                <br>
+                <small>
+                  ${escaparHTML(
+                    item.classificacao
+                  )}
+                </small>
+              </div>
+            `
+          )
+          .join('');
+      }
+
+      document.getElementById(
+        'resultadoRelevancia'
+      ).innerHTML = `
+        <div class="candidatos-card">
+
+          <h3>
+            ✅ Publicações relevantes para a ANTT
+          </h3>
+
+          <p>
+            <strong>Seção 1:</strong>
+            <span class="numero">
+              ${r1.length.toLocaleString('pt-BR')}
+            </span>
+          </p>
+
+          <p>
+            <strong>Seção 2:</strong>
+            <span class="numero">
+              ${r2.length.toLocaleString('pt-BR')}
+            </span>
+          </p>
+
+          <p>
+            <strong>Seção 3:</strong>
+            <span class="numero">
+              ${r3.length.toLocaleString('pt-BR')}
+            </span>
+          </p>
+
+          <p>
+            <strong>Total:</strong>
+            <span class="numero">
+              ${total.toLocaleString('pt-BR')}
+            </span>
+          </p>
+
+          <hr>
+
+          <strong>
+            Referência validada no n8n para 04/09/2026:
+          </strong>
+
+          <br>
+          Seção 1 = 62
+          <br>
+          Seção 2 = 3
+          <br>
+          Seção 3 = 11
+          <br>
+          Total = 76
+
+          <br><br>
+
+          <strong>
+            Classificação:
+          </strong>
+
+          <br>
+
+          ANTT_DIRETO:
+          ${
+            (
+              contarTipo(
+                r1,
+                'ANTT_DIRETO'
+              ) +
+              contarTipo(
+                r2,
+                'ANTT_DIRETO'
+              ) +
+              contarTipo(
+                r3,
+                'ANTT_DIRETO'
+              )
+            ).toLocaleString('pt-BR')
+          }
+
+          <br>
+
+          OUTRO_ORGAO_CITA_ANTT:
+          ${
+            (
+              contarTipo(
+                r1,
+                'OUTRO_ORGAO_CITA_ANTT'
+              ) +
+              contarTipo(
+                r2,
+                'OUTRO_ORGAO_CITA_ANTT'
+              ) +
+              contarTipo(
+                r3,
+                'OUTRO_ORGAO_CITA_ANTT'
+              )
+            ).toLocaleString('pt-BR')
+          }
+
+          <div class="amostra">
+            <strong>
+              Relevantes - Seção 1
+            </strong>
+
+            ${amostra(r1)}
+          </div>
+
+          <div class="amostra">
+            <strong>
+              Relevantes - Seção 2
+            </strong>
+
+            ${amostra(r2)}
+          </div>
+
+          <div class="amostra">
+            <strong>
+              Relevantes - Seção 3
+            </strong>
+
+            ${amostra(r3)}
+          </div>
+
+        </div>
+      `;
+    }
+
+
     async function processarDOU() {
       if (!validarArquivos()) return;
 
@@ -1402,6 +1976,7 @@
       window.resultadoExtracaoDOU = { 1: null, 2: null, 3: null };
       window.candidatosDOU = { 1: [], 2: [], 3: [] };
     window.publicacoesDOU = { 1: [], 2: [], 3: [] };
+      window.relevantesDOU = { 1: [], 2: [], 3: [] };
 
       try {
         await extrairPDF(pdfSecao1.files[0], 1);
@@ -1484,6 +2059,56 @@
           );
 
         mostrarResultadoPublicacoes();
+
+        document.getElementById(
+          'resultadoRelevancia'
+        ).innerHTML = `
+          <div class="candidatos-card">
+            <h3>Classificando relevância para a ANTT...</h3>
+            Aguarde.
+          </div>
+        `;
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              50
+            )
+        );
+
+        window.relevantesDOU[1] =
+          classificarRelevanciaPublicacoes(
+            window.publicacoesDOU[1]
+          );
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              0
+            )
+        );
+
+        window.relevantesDOU[2] =
+          classificarRelevanciaPublicacoes(
+            window.publicacoesDOU[2]
+          );
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              0
+            )
+        );
+
+        window.relevantesDOU[3] =
+          classificarRelevanciaPublicacoes(
+            window.publicacoesDOU[3]
+          );
+
+        mostrarResultadoRelevancia();
 
       } catch (erro) {
         console.error(erro);
