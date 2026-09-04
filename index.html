@@ -1,22 +1,12 @@
 <!DOCTYPE html>
-<!-- GitHub Pages -->
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boletim DOU - ANTT</title>
 
   <style>
-
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -35,24 +25,13 @@
       background: white;
       border-radius: 14px;
       padding: 30px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
     }
 
-    h1 {
-      margin-top: 0;
-      margin-bottom: 8px;
-      font-size: 28px;
-    }
+    h1 { margin-top: 0; margin-bottom: 8px; }
+    .subtitulo { color: #6b7280; margin-top: 0; margin-bottom: 28px; }
 
-    .subtitulo {
-      margin-top: 0;
-      margin-bottom: 30px;
-      color: #6b7280;
-    }
-
-    .campo {
-      margin-bottom: 24px;
-    }
+    .campo, .secao { margin-bottom: 18px; }
 
     label {
       display: block;
@@ -66,20 +45,16 @@
       padding: 12px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
-      background: white;
+      background: #fff;
     }
 
     .secao {
       border: 1px solid #e5e7eb;
       border-radius: 10px;
       padding: 18px;
-      margin-bottom: 18px;
     }
 
-    .secao h2 {
-      margin-top: 0;
-      font-size: 18px;
-    }
+    .secao h2 { margin-top: 0; font-size: 18px; }
 
     .arquivo-selecionado {
       margin-top: 8px;
@@ -89,31 +64,26 @@
 
     button {
       width: 100%;
-      border: none;
+      border: 0;
       border-radius: 9px;
       padding: 14px;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       background: #111827;
-      color: white;
+      color: #fff;
     }
 
-    button:hover {
-      opacity: 0.92;
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
 
     #resultado {
       display: none;
-      margin-top: 25px;
+      margin-top: 24px;
     }
 
-    .resultado-card {
+    .resultado-card,
+    .resumo-final,
+    .candidatos-card {
       border-radius: 10px;
       padding: 18px;
       margin-bottom: 12px;
@@ -121,14 +91,15 @@
       background: #f9fafb;
     }
 
-    .sucesso {
-      background: #ecfdf5;
-      border-color: #a7f3d0;
-    }
-
     .processando {
       background: #eff6ff;
       border-color: #bfdbfe;
+    }
+
+    .sucesso,
+    .resumo-final {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
     }
 
     .erro {
@@ -137,1650 +108,574 @@
       color: #991b1b;
     }
 
+    .candidatos-card {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
     .status-titulo {
       font-weight: bold;
       margin-bottom: 7px;
     }
 
-    .resumo-final {
-      margin-top: 20px;
-      padding: 20px;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      border-radius: 10px;
-    }
-
-    .resumo-final h3 {
-      margin-top: 0;
-    }
-
-    .candidatos-card {
-      margin-top: 20px;
-      padding: 20px;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 10px;
-    }
-
-    .candidatos-card h3 {
-      margin-top: 0;
-    }
-
-    .numero-grande {
+    .numero {
       font-size: 24px;
       font-weight: bold;
     }
 
     .amostra {
-      margin-top: 15px;
-      background: #ffffff;
-      border: 1px solid #dbeafe;
+      margin-top: 14px;
+      padding: 12px;
+      background: white;
       border-radius: 8px;
-      padding: 15px;
-      max-height: 280px;
+      max-height: 230px;
       overflow-y: auto;
+      border: 1px solid #dbeafe;
     }
 
-    .amostra-item {
-      padding: 7px 0;
+    .amostra div {
+      padding: 6px 0;
       border-bottom: 1px solid #e5e7eb;
       font-size: 13px;
     }
 
-    .amostra-item:last-child {
-      border-bottom: none;
-    }
-
+    .amostra div:last-child { border-bottom: 0; }
   </style>
-
 </head>
 
 <body>
-
   <div class="container">
-
     <div class="card">
 
-      <h1>
-        Boletim DOU - ANTT
-      </h1>
-
+      <h1>Boletim DOU - ANTT</h1>
       <p class="subtitulo">
         Selecione os PDFs das Seções 1, 2 e 3 do Diário Oficial da União.
       </p>
 
       <div class="campo">
-
-        <label for="dataDou">
-          Data do DOU
-        </label>
-
-        <input
-          type="date"
-          id="dataDou"
-        >
-
+        <label for="dataDou">Data do DOU</label>
+        <input type="date" id="dataDou">
       </div>
-
 
       <div class="secao">
-
-        <h2>
-          Seção 1
-        </h2>
-
-        <input
-          type="file"
-          id="pdfSecao1"
-          accept="application/pdf,.pdf"
-        >
-
-        <div
-          class="arquivo-selecionado"
-          id="nomeSecao1"
-        ></div>
-
+        <h2>Seção 1</h2>
+        <input type="file" id="pdfSecao1" accept="application/pdf,.pdf">
+        <div class="arquivo-selecionado" id="nomeSecao1"></div>
       </div>
-
 
       <div class="secao">
-
-        <h2>
-          Seção 2
-        </h2>
-
-        <input
-          type="file"
-          id="pdfSecao2"
-          accept="application/pdf,.pdf"
-        >
-
-        <div
-          class="arquivo-selecionado"
-          id="nomeSecao2"
-        ></div>
-
+        <h2>Seção 2</h2>
+        <input type="file" id="pdfSecao2" accept="application/pdf,.pdf">
+        <div class="arquivo-selecionado" id="nomeSecao2"></div>
       </div>
-
 
       <div class="secao">
-
-        <h2>
-          Seção 3
-        </h2>
-
-        <input
-          type="file"
-          id="pdfSecao3"
-          accept="application/pdf,.pdf"
-        >
-
-        <div
-          class="arquivo-selecionado"
-          id="nomeSecao3"
-        ></div>
-
+        <h2>Seção 3</h2>
+        <input type="file" id="pdfSecao3" accept="application/pdf,.pdf">
+        <div class="arquivo-selecionado" id="nomeSecao3"></div>
       </div>
 
-
-      <button id="btnProcessar">
-        PROCESSAR DOU
-      </button>
-
-
+      <button id="btnProcessar">PROCESSAR DOU</button>
       <div id="resultado"></div>
 
     </div>
-
   </div>
 
-
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-  ></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script>
-
-    // ============================================================
-    // CONFIGURAÇÃO PDF.JS
-    // ============================================================
-
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+    const dataDou = document.getElementById('dataDou');
+    const pdfSecao1 = document.getElementById('pdfSecao1');
+    const pdfSecao2 = document.getElementById('pdfSecao2');
+    const pdfSecao3 = document.getElementById('pdfSecao3');
+    const nomeSecao1 = document.getElementById('nomeSecao1');
+    const nomeSecao2 = document.getElementById('nomeSecao2');
+    const nomeSecao3 = document.getElementById('nomeSecao3');
+    const btnProcessar = document.getElementById('btnProcessar');
+    const resultado = document.getElementById('resultado');
 
-    // ============================================================
-    // ELEMENTOS
-    // ============================================================
+    window.textosDOU = { 1: '', 2: '', 3: '' };
+    window.resultadoExtracaoDOU = { 1: null, 2: null, 3: null };
+    window.candidatosDOU = { 1: [], 2: [], 3: [] };
 
-    const dataDou =
-      document.getElementById('dataDou');
-
-    const pdfSecao1 =
-      document.getElementById('pdfSecao1');
-
-    const pdfSecao2 =
-      document.getElementById('pdfSecao2');
-
-    const pdfSecao3 =
-      document.getElementById('pdfSecao3');
-
-    const nomeSecao1 =
-      document.getElementById('nomeSecao1');
-
-    const nomeSecao2 =
-      document.getElementById('nomeSecao2');
-
-    const nomeSecao3 =
-      document.getElementById('nomeSecao3');
-
-    const btnProcessar =
-      document.getElementById('btnProcessar');
-
-    const resultado =
-      document.getElementById('resultado');
-
-
-    // ============================================================
-    // MEMÓRIA
-    // ============================================================
-
-    window.textosDOU = {
-      1: '',
-      2: '',
-      3: ''
-    };
-
-
-    window.resultadoExtracaoDOU = {
-      1: null,
-      2: null,
-      3: null
-    };
-
-
-    window.candidatosDOU = {
-      1: [],
-      2: [],
-      3: []
-    };
-
-
-    // ============================================================
-    // UTILITÁRIOS
-    // ============================================================
-
-    function limparLinha(texto) {
-
-      return String(texto || '')
-        .replace(/\r/g, '')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\*/g, '')
-        .replace(/[ \t]+/g, ' ')
-        .trim();
-
-    }
-
-
-    function normalizar(texto) {
-
-      return String(texto || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\u00A0/g, ' ')
-        .replace(/\r/g, '')
-        .replace(/[ \t]+/g, ' ')
-        .toUpperCase()
-        .trim();
-
-    }
-
-
-    function linhaEmCaixaAlta(linha) {
-
-      const texto =
-        limparLinha(linha);
-
-      if (!texto) {
-        return false;
-      }
-
-
-      const letras =
-        texto.replace(
-          /[^A-Za-zÀ-ÖØ-öø-ÿ]/g,
-          ''
-        );
-
-
-      if (!letras) {
-        return false;
-      }
-
-
-      return (
-        letras ===
-        letras.toUpperCase()
-      );
-
-    }
-
-
-    // ============================================================
-    // CORRIGIR TIPOGRAFIA DO DOU
-    // ============================================================
-
-    function corrigirTipografiaDOU(texto) {
-
-      let t =
-        limparLinha(texto);
-
-
-      t = t
-        .replace(
-          /^R\s*E\s*T\s*I\s*F\s*I\s*C\s*A\s*Ç\s*Ã\s*O$/i,
-          'RETIFICAÇÃO'
-        )
-        .replace(
-          /^A\s*V\s*I\s*S\s*O$/i,
-          'AVISO'
-        )
-        .replace(
-          /^A\s*V\s*I\s*S\s*O\s*S$/i,
-          'AVISOS'
-        )
-        .replace(
-          /^C\s*O\s*M\s*U\s*N\s*I\s*C\s*A\s*D\s*O$/i,
-          'COMUNICADO'
-        )
-        .replace(
-          /^C\s*O\s*M\s*U\s*N\s*I\s*C\s*A\s*D\s*O\s*S$/i,
-          'COMUNICADOS'
-        );
-
-
-      return t;
-
-    }
-
-
-    // ============================================================
-    // MOSTRAR ARQUIVOS
-    // ============================================================
-
-    function mostrarNomeArquivo(
-      input,
-      elemento
-    ) {
-
+    function mostrarNomeArquivo(input, elemento) {
       if (!input.files[0]) {
-
         elemento.textContent = '';
-
         return;
-
       }
 
-
-      const arquivo =
-        input.files[0];
-
-
-      const tamanhoMB =
-        (
-          arquivo.size /
-          1024 /
-          1024
-        ).toFixed(2);
-
-
+      const arquivo = input.files[0];
+      const tamanhoMB = (arquivo.size / 1024 / 1024).toFixed(2);
       elemento.textContent =
         `Arquivo selecionado: ${arquivo.name} (${tamanhoMB} MB)`;
-
     }
 
+    pdfSecao1.addEventListener('change', () => mostrarNomeArquivo(pdfSecao1, nomeSecao1));
+    pdfSecao2.addEventListener('change', () => mostrarNomeArquivo(pdfSecao2, nomeSecao2));
+    pdfSecao3.addEventListener('change', () => mostrarNomeArquivo(pdfSecao3, nomeSecao3));
 
-    pdfSecao1.addEventListener(
-      'change',
-      function () {
-
-        mostrarNomeArquivo(
-          pdfSecao1,
-          nomeSecao1
-        );
-
-      }
-    );
-
-
-    pdfSecao2.addEventListener(
-      'change',
-      function () {
-
-        mostrarNomeArquivo(
-          pdfSecao2,
-          nomeSecao2
-        );
-
-      }
-    );
-
-
-    pdfSecao3.addEventListener(
-      'change',
-      function () {
-
-        mostrarNomeArquivo(
-          pdfSecao3,
-          nomeSecao3
-        );
-
-      }
-    );
-
-
-    // ============================================================
-    // INTERFACE
-    // ============================================================
+    function escaparHTML(texto) {
+      return String(texto || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
     function criarAreasResultado() {
-
-      resultado.style.display =
-        'block';
-
-
+      resultado.style.display = 'block';
       resultado.innerHTML = `
-
-        <div
-          id="statusSecao1"
-          class="resultado-card"
-        >
-          <div class="status-titulo">
-            Seção 1
-          </div>
-
-          <div id="textoStatus1">
-            Aguardando...
-          </div>
+        <div id="statusSecao1" class="resultado-card">
+          <div class="status-titulo">Seção 1</div>
+          <div id="textoStatus1">Aguardando...</div>
         </div>
 
-
-        <div
-          id="statusSecao2"
-          class="resultado-card"
-        >
-          <div class="status-titulo">
-            Seção 2
-          </div>
-
-          <div id="textoStatus2">
-            Aguardando...
-          </div>
+        <div id="statusSecao2" class="resultado-card">
+          <div class="status-titulo">Seção 2</div>
+          <div id="textoStatus2">Aguardando...</div>
         </div>
 
-
-        <div
-          id="statusSecao3"
-          class="resultado-card"
-        >
-          <div class="status-titulo">
-            Seção 3
-          </div>
-
-          <div id="textoStatus3">
-            Aguardando...
-          </div>
+        <div id="statusSecao3" class="resultado-card">
+          <div class="status-titulo">Seção 3</div>
+          <div id="textoStatus3">Aguardando...</div>
         </div>
-
 
         <div id="resumoFinal"></div>
-
         <div id="resultadoCandidatos"></div>
-
       `;
-
     }
 
+    function atualizarStatus(secao, mensagem, tipo = '') {
+      const card = document.getElementById(`statusSecao${secao}`);
+      const texto = document.getElementById(`textoStatus${secao}`);
 
-    function atualizarStatus(
-      secao,
-      mensagem,
-      tipo = ''
-    ) {
+      if (!card || !texto) return;
 
-      const card =
-        document.getElementById(
-          `statusSecao${secao}`
-        );
-
-
-      const texto =
-        document.getElementById(
-          `textoStatus${secao}`
-        );
-
-
-      if (!card || !texto) {
-        return;
-      }
-
-
-      card.className =
-        'resultado-card';
-
-
-      if (tipo) {
-
-        card.classList.add(
-          tipo
-        );
-
-      }
-
-
-      texto.innerHTML =
-        mensagem;
-
+      card.className = 'resultado-card';
+      if (tipo) card.classList.add(tipo);
+      texto.innerHTML = mensagem;
     }
-
-
-    // ============================================================
-    // VALIDAÇÃO
-    // ============================================================
 
     function validarArquivos() {
-
       if (!dataDou.value) {
-
-        alert(
-          'Informe a data do DOU.'
-        );
-
+        alert('Informe a data do DOU.');
         return false;
-
       }
-
 
       if (!pdfSecao1.files[0]) {
-
-        alert(
-          'Selecione o PDF da Seção 1.'
-        );
-
+        alert('Selecione o PDF da Seção 1.');
         return false;
-
       }
-
 
       if (!pdfSecao2.files[0]) {
-
-        alert(
-          'Selecione o PDF da Seção 2.'
-        );
-
+        alert('Selecione o PDF da Seção 2.');
         return false;
-
       }
-
 
       if (!pdfSecao3.files[0]) {
-
-        alert(
-          'Selecione o PDF da Seção 3.'
-        );
-
+        alert('Selecione o PDF da Seção 3.');
         return false;
-
       }
-
 
       return true;
-
     }
 
-
-    // ============================================================
-    // MONTAR TEXTO DA PÁGINA
-    // ============================================================
-
-    function montarTextoPagina(
-      itens
-    ) {
-
-      let texto =
-        '';
-
+    function montarTextoPagina(itens) {
+      let texto = '';
 
       for (const item of itens) {
+        const trecho = String(item.str || '');
+        if (!trecho) continue;
 
-        const trecho =
-          String(
-            item.str || ''
-          );
-
-
-        if (!trecho) {
-          continue;
-        }
-
-
-        texto +=
-          trecho;
-
-
-        if (item.hasEOL) {
-
-          texto +=
-            '\n';
-
-        } else {
-
-          texto +=
-            ' ';
-
-        }
-
+        texto += trecho;
+        texto += item.hasEOL ? '\n' : ' ';
       }
-
 
       return texto
         .replace(/[ \t]+\n/g, '\n')
         .replace(/[ \t]{2,}/g, ' ')
         .trim();
-
     }
 
+    async function extrairPDF(arquivo, secao) {
+      atualizarStatus(secao, 'Carregando o PDF...', 'processando');
 
-    // ============================================================
-    // EXTRAIR PDF
-    // ============================================================
+      const arrayBuffer = await arquivo.arrayBuffer();
+      const tarefaPDF = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await tarefaPDF.promise;
 
-    async function extrairPDF(
-      arquivo,
-      secao
-    ) {
+      const totalPaginas = pdf.numPages;
+      let textoCompleto = '';
 
-      atualizarStatus(
-        secao,
-        'Carregando o PDF...',
-        'processando'
-      );
-
-
-      const arrayBuffer =
-        await arquivo.arrayBuffer();
-
-
-      const tarefaPDF =
-        pdfjsLib.getDocument({
-          data: arrayBuffer
-        });
-
-
-      const pdf =
-        await tarefaPDF.promise;
-
-
-      const totalPaginas =
-        pdf.numPages;
-
-
-      let textoCompleto =
-        '';
-
-
-      for (
-        let paginaNumero = 1;
-        paginaNumero <= totalPaginas;
-        paginaNumero++
-      ) {
-
+      for (let paginaNumero = 1; paginaNumero <= totalPaginas; paginaNumero++) {
         atualizarStatus(
           secao,
-          `
-            Extraindo página
-            <strong>${paginaNumero}</strong>
-            de
-            <strong>${totalPaginas}</strong>...
-          `,
+          `Extraindo página <strong>${paginaNumero}</strong> de <strong>${totalPaginas}</strong>...`,
           'processando'
         );
 
+        const pagina = await pdf.getPage(paginaNumero);
+        const conteudo = await pagina.getTextContent();
+        const textoPagina = montarTextoPagina(conteudo.items);
 
-        const pagina =
-          await pdf.getPage(
-            paginaNumero
-          );
-
-
-        const conteudo =
-          await pagina.getTextContent();
-
-
-        const textoPagina =
-          montarTextoPagina(
-            conteudo.items
-          );
-
-
-        textoCompleto +=
-          `\n${textoPagina}\n`;
-
-
+        textoCompleto += `\n${textoPagina}\n`;
         pagina.cleanup();
 
-
-        if (
-          paginaNumero % 10 === 0
-        ) {
-
-          await new Promise(
-            resolve =>
-              setTimeout(
-                resolve,
-                0
-              )
-          );
-
+        if (paginaNumero % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
-
       }
 
+      textoCompleto = textoCompleto
+        .replace(/\r/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 
-      textoCompleto =
-        textoCompleto
-          .replace(/\r/g, '')
-          .replace(/\n{3,}/g, '\n\n')
-          .trim();
-
-
-      const quantidadeCaracteres =
-        textoCompleto.length;
-
-
-      window.textosDOU[secao] =
-        textoCompleto;
-
+      window.textosDOU[secao] = textoCompleto;
 
       window.resultadoExtracaoDOU[secao] = {
-
-        secao:
-          String(secao),
-
-        nomeArquivo:
-          arquivo.name,
-
-        tamanhoArquivo:
-          arquivo.size,
-
-        paginas:
-          totalPaginas,
-
-        caracteres:
-          quantidadeCaracteres
-
+        secao: String(secao),
+        nomeArquivo: arquivo.name,
+        paginas: totalPaginas,
+        caracteres: textoCompleto.length
       };
-
 
       atualizarStatus(
         secao,
-        `
-          ✅ Extração concluída.
-          <br><br>
-
-          <strong>Páginas:</strong>
-          ${totalPaginas}
-
-          <br>
-
-          <strong>Caracteres:</strong>
-          ${quantidadeCaracteres.toLocaleString('pt-BR')}
-
-          <br>
-
-          <strong>Arquivo:</strong>
-          ${arquivo.name}
-        `,
+        `✅ Extração concluída.<br><br>
+         <strong>Páginas:</strong> ${totalPaginas}<br>
+         <strong>Caracteres:</strong> ${textoCompleto.length.toLocaleString('pt-BR')}<br>
+         <strong>Arquivo:</strong> ${escaparHTML(arquivo.name)}`,
         'sucesso'
       );
 
-
       await pdf.destroy();
-
-
-      return textoCompleto;
-
     }
 
-
     // ============================================================
-    // CLASSIFICAR CABEÇALHO - SEÇÃO 1
+    // MIGRAÇÃO DO NODE:
+    // CODE - CLASSIFICAR CANDIDATOS POR SEÇÃO
     // ============================================================
 
-    function ehCandidatoSecao1(
-      linha
-    ) {
+    function normalizar(texto) {
+      return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    }
 
-      const original =
-        corrigirTipografiaDOU(
-          linha
-        );
+    function normalizarMaiusculo(texto) {
+      return normalizar(texto).toUpperCase();
+    }
 
+    function linhaEmCaixaAlta(linha) {
+      const texto = normalizar(linha);
 
-      if (
-        !linhaEmCaixaAlta(
-          original
-        )
-      ) {
+      if (!texto) {
         return false;
       }
 
+      const letras = texto.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
 
-      const n =
-        normalizar(
-          original
-        );
-
-
-      const padroes =
-        [
-
-          /^DELIBERACAO ANTT\b/,
-
-          /^RESOLUCAO ANTT\b/,
-
-          /^INSTRUCAO NORMATIVA ANTT\b/,
-
-          /^PORTARIA ANTT\b/,
-
-          /^PORTARIA SUSPI\b/,
-
-          /^PORTARIA SUROD\b/,
-
-          /^PORTARIA SUPAS\b/,
-
-          /^PORTARIA SUFER\b/,
-
-          /^PORTARIA SUDEG\b/,
-
-          /^DECISAO SUROD\b/,
-
-          /^DECISAO SUROC\b/,
-
-          /^DECISAO SUFER\b/,
-
-          /^DECISAO SUPAS\b/,
-
-          /^DECISAO SUESP\b/,
-
-          /^PORTARIA\b/,
-
-          /^DELIBERACAO\b/,
-
-          /^RESOLUCAO\b/,
-
-          /^INSTRUCAO NORMATIVA\b/,
-
-          /^DECISAO\b/,
-
-          /^DESPACHO\b/,
-
-          /^ATO\b/,
-
-          /^ORDEM DE SERVICO\b/,
-
-          /^NORMA\b/,
-
-          /^REGULAMENTO\b/,
-
-          /^RETIFICACAO\b/,
-
-          /^SUMULA\b/
-
-        ];
-
-
-      return padroes.some(
-        regex =>
-          regex.test(n)
-      );
-
-    }
-
-
-    // ============================================================
-    // CLASSIFICAR CABEÇALHO - SEÇÃO 2
-    // ============================================================
-
-    function ehCandidatoSecao2(
-      linha
-    ) {
-
-      const original =
-        corrigirTipografiaDOU(
-          linha
-        );
-
-
-      if (
-        !linhaEmCaixaAlta(
-          original
-        )
-      ) {
+      if (!letras) {
         return false;
       }
 
-
-      const n =
-        normalizar(
-          original
-        );
-
-
-      const padroes =
-        [
-
-          /^PORTARIA DE PESSOAL\b/,
-
-          /^PORTARIA DG\b/,
-
-          /^PORTARIA CONJUNTA\b/,
-
-          /^PORTARIA\b/,
-
-          /^DESPACHO\b/,
-
-          /^ATO\b/,
-
-          /^DECISAO\b/,
-
-          /^RESOLUCAO\b/,
-
-          /^EDITAL\b/,
-
-          /^RETIFICACAO\b/
-
-        ];
-
-
-      return padroes.some(
-        regex =>
-          regex.test(n)
-      );
-
+      return letras === letras.toUpperCase();
     }
 
+    function corrigirTipografiaDOU(linha) {
+      let texto = normalizar(linha);
 
-    // ============================================================
-    // CLASSIFICAR CABEÇALHO - SEÇÃO 3
-    // ============================================================
-
-    function ehCandidatoSecao3(
-      linha
-    ) {
-
-      const original =
-        corrigirTipografiaDOU(
-          linha
-        );
-
-
-      if (
-        !linhaEmCaixaAlta(
-          original
-        )
-      ) {
-        return false;
-      }
-
-
-      const n =
-        normalizar(
-          original
-        );
-
-
-      const padroes =
-        [
-
-          /^EXTRATO\b/,
-
-          /^EXTRATOS\b/,
-
-          /^EDITAL\b/,
-
-          /^EDITAIS\b/,
-
-          /^AVISO\b/,
-
-          /^AVISOS\b/,
-
-          /^COMUNICADO\b/,
-
-          /^COMUNICADOS\b/,
-
-          /^RESULTADO DE JULGAMENTO\b/,
-
-          /^RESULTADOS DE JULGAMENTO\b/,
-
-          /^RETIFICACAO\b/
-
-        ];
-
-
-      return padroes.some(
-        regex =>
-          regex.test(n)
+      texto = texto.replace(
+        /^R\s*E\s*T\s*I\s*F\s*I\s*C\s*A\s*[ÇC]\s*[ÃA]\s*O$/i,
+        'RETIFICAÇÃO'
       );
 
+      texto = texto.replace(
+        /^A\s*V\s*I\s*S\s*O$/i,
+        'AVISO'
+      );
+
+      texto = texto.replace(
+        /^C\s*O\s*M\s*U\s*N\s*I\s*C\s*A\s*D\s*O$/i,
+        'COMUNICADO'
+      );
+
+      return texto;
     }
 
+    function detectarSecao1(linha) {
+      const original = corrigirTipografiaDOU(linha);
+      const n = normalizarMaiusculo(original);
 
-    // ============================================================
-    // IDENTIFICAR CANDIDATOS
-    // ============================================================
-
-    function classificarCandidatos(
-      texto,
-      secao
-    ) {
-
-      const candidatos =
-        [];
-
-
-      const linhas =
-        texto.split('\n');
-
-
-      let posicao =
-        0;
-
-
-      for (
-        let i = 0;
-        i < linhas.length;
-        i++
-      ) {
-
-        const linhaOriginal =
-          linhas[i];
-
-
-        const linha =
-          corrigirTipografiaDOU(
-            linhaOriginal
-          );
-
-
-        let candidato =
-          false;
-
-
-        if (
-          String(secao) === '1'
-        ) {
-
-          candidato =
-            ehCandidatoSecao1(
-              linha
-            );
-
-        }
-
-
-        else if (
-          String(secao) === '2'
-        ) {
-
-          candidato =
-            ehCandidatoSecao2(
-              linha
-            );
-
-        }
-
-
-        else if (
-          String(secao) === '3'
-        ) {
-
-          candidato =
-            ehCandidatoSecao3(
-              linha
-            );
-
-        }
-
-
-        if (candidato) {
-
-          candidatos.push({
-
-            secao:
-              String(secao),
-
-            indice:
-              candidatos.length,
-
-            linha:
-              i,
-
-            posicao:
-              posicao,
-
-            cabecalhoEncontrado:
-              linha
-
-          });
-
-        }
-
-
-        posicao +=
-          linhaOriginal.length + 1;
-
+      if (!linhaEmCaixaAlta(original)) {
+        return null;
       }
 
+      const padroesANTT = [
+        /^DELIBERACAO ANTT Nº/,
+        /^RESOLUCAO ANTT Nº/,
+        /^INSTRUCAO NORMATIVA ANTT Nº/,
+        /^PORTARIA ANTT Nº/,
+        /^PORTARIA SUSPI Nº/,
+        /^PORTARIA SUROD Nº/,
+        /^PORTARIA SUPAS Nº/,
+        /^PORTARIA SUFER Nº/,
+        /^PORTARIA SUDEG Nº/,
+        /^DECISAO SUROD Nº/,
+        /^DECISAO SUROC Nº/,
+        /^DECISAO SUFER Nº/,
+        /^DECISAO SUPAS Nº/,
+        /^DECISAO SUESP Nº/
+      ];
+
+      if (padroesANTT.some(regex => regex.test(n))) {
+        return original;
+      }
+
+      const padroesGerais = [
+        /^PORTARIA\b/,
+        /^DELIBERACAO\b/,
+        /^RESOLUCAO\b/,
+        /^INSTRUCAO NORMATIVA\b/,
+        /^DECISAO\b/,
+        /^DESPACHO\b/,
+        /^ATO\b/,
+        /^ORDEM DE SERVICO\b/,
+        /^NORMA\b/,
+        /^REGULAMENTO\b/,
+        /^RETIFICACAO\b/,
+        /^SUMULA\b/
+      ];
+
+      if (padroesGerais.some(regex => regex.test(n))) {
+        return original;
+      }
+
+      return null;
+    }
+
+    function detectarSecao2(linha) {
+      const original = corrigirTipografiaDOU(linha);
+      const n = normalizarMaiusculo(original);
+
+      if (!linhaEmCaixaAlta(original)) {
+        return null;
+      }
+
+      const padroes = [
+        /^PORTARIA DE PESSOAL Nº/,
+        /^PORTARIA DG Nº/,
+        /^PORTARIA CONJUNTA\b/,
+        /^PORTARIA\b/,
+        /^DESPACHO\b/,
+        /^ATO\b/,
+        /^DECISAO\b/,
+        /^RESOLUCAO\b/,
+        /^EDITAL\b/,
+        /^RETIFICACAO\b/
+      ];
+
+      if (padroes.some(regex => regex.test(n))) {
+        return original;
+      }
+
+      return null;
+    }
+
+    function detectarSecao3(linha) {
+      const original = corrigirTipografiaDOU(linha);
+      const n = normalizarMaiusculo(original);
+
+      if (!linhaEmCaixaAlta(original)) {
+        return null;
+      }
+
+      const padroes = [
+        /^EXTRATO\b/,
+        /^EXTRATOS\b/,
+        /^EDITAL\b/,
+        /^EDITAIS\b/,
+        /^AVISO\b/,
+        /^AVISOS\b/,
+        /^COMUNICADO\b/,
+        /^COMUNICADOS\b/,
+        /^RESULTADO DE JULGAMENTO\b/,
+        /^RESULTADOS DE JULGAMENTO\b/,
+        /^RESULTADO\b/,
+        /^RESULTADOS\b/,
+        /^RETIFICACAO\b/
+      ];
+
+      if (padroes.some(regex => regex.test(n))) {
+        return original;
+      }
+
+      return null;
+    }
+
+    function detectarCabecalho(secao, linha) {
+      if (secao === '1') return detectarSecao1(linha);
+      if (secao === '2') return detectarSecao2(linha);
+      if (secao === '3') return detectarSecao3(linha);
+      return null;
+    }
+
+    function classificarCandidatos(texto, secao) {
+      const linhas = texto.replace(/\r/g, '').split('\n');
+      const candidatos = [];
+      let posicaoAtual = 0;
+
+      for (const linhaOriginal of linhas) {
+        const linha = normalizar(linhaOriginal);
+
+        if (linha) {
+          const cabecalho = detectarCabecalho(String(secao), linha);
+
+          if (cabecalho) {
+            candidatos.push({
+              secao: String(secao),
+              indice: candidatos.length,
+              posicao: posicaoAtual,
+              cabecalhoEncontrado: cabecalho
+            });
+          }
+        }
+
+        posicaoAtual += linhaOriginal.length + 1;
+      }
 
       return candidatos;
-
     }
 
-
-    // ============================================================
-    // EXECUTAR CLASSIFICAÇÃO
-    // ============================================================
-
-    async function executarClassificacaoCandidatos() {
-
-      const area =
-        document.getElementById(
-          'resultadoCandidatos'
-        );
-
-
-      area.innerHTML = `
-
-        <div class="candidatos-card">
-
-          <h3>
-            Identificando publicações candidatas...
-          </h3>
-
-          Aguarde.
-
-        </div>
-
-      `;
-
-
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            50
-          )
-      );
-
-
-      window.candidatosDOU[1] =
-        classificarCandidatos(
-          window.textosDOU[1],
-          1
-        );
-
-
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            0
-          )
-      );
-
-
-      window.candidatosDOU[2] =
-        classificarCandidatos(
-          window.textosDOU[2],
-          2
-        );
-
-
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            0
-          )
-      );
-
-
-      window.candidatosDOU[3] =
-        classificarCandidatos(
-          window.textosDOU[3],
-          3
-        );
-
-
-      mostrarResultadoCandidatos();
-
-    }
-
-
-    // ============================================================
-    // ESCAPAR HTML
-    // ============================================================
-
-    function escaparHTML(
-      texto
-    ) {
-
-      return String(
-        texto || ''
-      )
-        .replace(
-          /&/g,
-          '&amp;'
-        )
-        .replace(
-          /</g,
-          '&lt;'
-        )
-        .replace(
-          />/g,
-          '&gt;'
-        )
-        .replace(
-          /"/g,
-          '&quot;'
-        )
-        .replace(
-          /'/g,
-          '&#039;'
-        );
-
-    }
-
-
-    // ============================================================
-    // MOSTRAR CANDIDATOS
-    // ============================================================
-
-    function gerarAmostra(
-      candidatos
-    ) {
-
-      return candidatos
-        .slice(
-          0,
-          15
-        )
-        .map(
-          candidato => `
-
-            <div class="amostra-item">
-
-              <strong>
-                ${candidato.indice}
-              </strong>
-
-              -
-
-              ${escaparHTML(
-                candidato.cabecalhoEncontrado
-              )}
-
-            </div>
-
-          `
-        )
+    function gerarAmostra(lista) {
+      return lista
+        .slice(0, 12)
+        .map(item => `<div><strong>${item.indice}</strong> — ${escaparHTML(item.cabecalhoEncontrado)}</div>`)
         .join('');
-
     }
-
 
     function mostrarResultadoCandidatos() {
+      const q1 = window.candidatosDOU[1].length;
+      const q2 = window.candidatosDOU[2].length;
+      const q3 = window.candidatosDOU[3].length;
+      const total = q1 + q2 + q3;
 
-      const area =
-        document.getElementById(
-          'resultadoCandidatos'
-        );
-
-
-      const quantidade1 =
-        window.candidatosDOU[1].length;
-
-
-      const quantidade2 =
-        window.candidatosDOU[2].length;
-
-
-      const quantidade3 =
-        window.candidatosDOU[3].length;
-
-
-      const total =
-        quantidade1 +
-        quantidade2 +
-        quantidade3;
-
-
-      area.innerHTML = `
-
+      document.getElementById('resultadoCandidatos').innerHTML = `
         <div class="candidatos-card">
+          <h3>✅ Publicações candidatas identificadas</h3>
 
-          <h3>
-            ✅ Publicações candidatas identificadas
-          </h3>
-
-
-          <p>
-
-            <strong>
-              Seção 1:
-            </strong>
-
-            <span class="numero-grande">
-              ${quantidade1.toLocaleString('pt-BR')}
-            </span>
-
-          </p>
-
-
-          <p>
-
-            <strong>
-              Seção 2:
-            </strong>
-
-            <span class="numero-grande">
-              ${quantidade2.toLocaleString('pt-BR')}
-            </span>
-
-          </p>
-
-
-          <p>
-
-            <strong>
-              Seção 3:
-            </strong>
-
-            <span class="numero-grande">
-              ${quantidade3.toLocaleString('pt-BR')}
-            </span>
-
-          </p>
-
-
-          <p>
-
-            <strong>
-              Total:
-            </strong>
-
-            <span class="numero-grande">
-              ${total.toLocaleString('pt-BR')}
-            </span>
-
-          </p>
-
+          <p><strong>Seção 1:</strong> <span class="numero">${q1.toLocaleString('pt-BR')}</span></p>
+          <p><strong>Seção 2:</strong> <span class="numero">${q2.toLocaleString('pt-BR')}</span></p>
+          <p><strong>Seção 3:</strong> <span class="numero">${q3.toLocaleString('pt-BR')}</span></p>
+          <p><strong>Total:</strong> <span class="numero">${total.toLocaleString('pt-BR')}</span></p>
 
           <hr>
 
-
-          <strong>
-            Referência do n8n para 04/09/2026:
-          </strong>
-
-          <br>
-
-          Seção 1 = 345
-
-          <br>
-
-          Seção 2 = 877
-
-          <br>
-
+          <strong>Referência do n8n para 04/09/2026:</strong><br>
+          Seção 1 = 345<br>
+          Seção 2 = 877<br>
           Seção 3 = 2.676
 
-
           <div class="amostra">
-
-            <strong>
-              Primeiros candidatos da Seção 1
-            </strong>
-
-            ${gerarAmostra(
-              window.candidatosDOU[1]
-            )}
-
+            <strong>Primeiros candidatos da Seção 1</strong>
+            ${gerarAmostra(window.candidatosDOU[1])}
           </div>
 
-
           <div class="amostra">
-
-            <strong>
-              Primeiros candidatos da Seção 2
-            </strong>
-
-            ${gerarAmostra(
-              window.candidatosDOU[2]
-            )}
-
+            <strong>Primeiros candidatos da Seção 2</strong>
+            ${gerarAmostra(window.candidatosDOU[2])}
           </div>
 
-
           <div class="amostra">
-
-            <strong>
-              Primeiros candidatos da Seção 3
-            </strong>
-
-            ${gerarAmostra(
-              window.candidatosDOU[3]
-            )}
-
+            <strong>Primeiros candidatos da Seção 3</strong>
+            ${gerarAmostra(window.candidatosDOU[3])}
           </div>
-
-
-          <br>
-
-          Próxima etapa:
-          extrair o conteúdo completo
-          de cada publicação.
-
         </div>
-
       `;
-
     }
 
+    function mostrarResumoExtracao() {
+      const s1 = window.resultadoExtracaoDOU[1];
+      const s2 = window.resultadoExtracaoDOU[2];
+      const s3 = window.resultadoExtracaoDOU[3];
 
-    // ============================================================
-    // RESUMO DA EXTRAÇÃO
-    // ============================================================
+      const totalPaginas = s1.paginas + s2.paginas + s3.paginas;
+      const totalCaracteres = s1.caracteres + s2.caracteres + s3.caracteres;
 
-    function mostrarResumoFinal() {
-
-      const resumo =
-        document.getElementById(
-          'resumoFinal'
-        );
-
-
-      const secao1 =
-        window.resultadoExtracaoDOU[1];
-
-
-      const secao2 =
-        window.resultadoExtracaoDOU[2];
-
-
-      const secao3 =
-        window.resultadoExtracaoDOU[3];
-
-
-      const totalPaginas =
-        secao1.paginas +
-        secao2.paginas +
-        secao3.paginas;
-
-
-      const totalCaracteres =
-        secao1.caracteres +
-        secao2.caracteres +
-        secao3.caracteres;
-
-
-      resumo.innerHTML = `
-
+      document.getElementById('resumoFinal').innerHTML = `
         <div class="resumo-final">
-
-          <h3>
-            ✅ Extração concluída
-          </h3>
-
-          <strong>
-            DOU:
-          </strong>
-
-          ${dataDou.value}
-
-          <br><br>
-
-
-          <strong>
-            Seção 1:
-          </strong>
-
-          ${secao1.paginas} páginas
-
-          <br>
-
-
-          <strong>
-            Seção 2:
-          </strong>
-
-          ${secao2.paginas} páginas
-
-          <br>
-
-
-          <strong>
-            Seção 3:
-          </strong>
-
-          ${secao3.paginas} páginas
-
-          <br><br>
-
-
-          <strong>
-            Total de páginas:
-          </strong>
-
-          ${totalPaginas}
-
-          <br>
-
-
-          <strong>
-            Total de caracteres:
-          </strong>
-
-          ${totalCaracteres.toLocaleString('pt-BR')}
-
+          <h3>✅ Extração concluída</h3>
+          <strong>DOU:</strong> ${dataDou.value}<br><br>
+          <strong>Seção 1:</strong> ${s1.paginas} páginas<br>
+          <strong>Seção 2:</strong> ${s2.paginas} páginas<br>
+          <strong>Seção 3:</strong> ${s3.paginas} páginas<br><br>
+          <strong>Total de páginas:</strong> ${totalPaginas}<br>
+          <strong>Total de caracteres:</strong> ${totalCaracteres.toLocaleString('pt-BR')}
         </div>
-
       `;
-
     }
-
-
-    // ============================================================
-    // PROCESSAMENTO PRINCIPAL
-    // ============================================================
 
     async function processarDOU() {
-
-      if (
-        !validarArquivos()
-      ) {
-        return;
-      }
-
+      if (!validarArquivos()) return;
 
       criarAreasResultado();
+      btnProcessar.disabled = true;
+      btnProcessar.textContent = 'PROCESSANDO...';
 
-
-      btnProcessar.disabled =
-        true;
-
-
-      btnProcessar.textContent =
-        'PROCESSANDO...';
-
-
-      window.textosDOU = {
-        1: '',
-        2: '',
-        3: ''
-      };
-
-
-      window.resultadoExtracaoDOU = {
-        1: null,
-        2: null,
-        3: null
-      };
-
-
-      window.candidatosDOU = {
-        1: [],
-        2: [],
-        3: []
-      };
-
+      window.textosDOU = { 1: '', 2: '', 3: '' };
+      window.resultadoExtracaoDOU = { 1: null, 2: null, 3: null };
+      window.candidatosDOU = { 1: [], 2: [], 3: [] };
 
       try {
+        await extrairPDF(pdfSecao1.files[0], 1);
+        await extrairPDF(pdfSecao2.files[0], 2);
+        await extrairPDF(pdfSecao3.files[0], 3);
 
-        await extrairPDF(
-          pdfSecao1.files[0],
-          1
-        );
+        mostrarResumoExtracao();
 
-
-        await extrairPDF(
-          pdfSecao2.files[0],
-          2
-        );
-
-
-        await extrairPDF(
-          pdfSecao3.files[0],
-          3
-        );
-
-
-        mostrarResumoFinal();
-
-
-        await executarClassificacaoCandidatos();
-
-
-      } catch (erro) {
-
-        console.error(
-          erro
-        );
-
-
-        resultado.innerHTML += `
-
-          <div class="resultado-card erro">
-
-            <div class="status-titulo">
-              Erro durante o processamento
-            </div>
-
-            ${escaparHTML(
-              erro.message || erro
-            )}
-
+        document.getElementById('resultadoCandidatos').innerHTML = `
+          <div class="candidatos-card">
+            <h3>Identificando publicações candidatas...</h3>
+            Aguarde.
           </div>
-
         `;
 
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        window.candidatosDOU[1] = classificarCandidatos(window.textosDOU[1], '1');
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        window.candidatosDOU[2] = classificarCandidatos(window.textosDOU[2], '2');
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        window.candidatosDOU[3] = classificarCandidatos(window.textosDOU[3], '3');
+
+        mostrarResultadoCandidatos();
+
+      } catch (erro) {
+        console.error(erro);
+
+        resultado.innerHTML += `
+          <div class="resultado-card erro">
+            <div class="status-titulo">Erro durante o processamento</div>
+            ${escaparHTML(erro.message || erro)}
+          </div>
+        `;
       } finally {
-
-        btnProcessar.disabled =
-          false;
-
-
-        btnProcessar.textContent =
-          'PROCESSAR DOU';
-
+        btnProcessar.disabled = false;
+        btnProcessar.textContent = 'PROCESSAR DOU';
       }
-
     }
 
-
-    // ============================================================
-    // BOTÃO
-    // ============================================================
-
-    btnProcessar.addEventListener(
-      'click',
-      processarDOU
-    );
-
+    btnProcessar.addEventListener('click', processarDOU);
   </script>
-
 </body>
-
 </html>
