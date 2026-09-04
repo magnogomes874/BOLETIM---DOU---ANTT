@@ -252,6 +252,47 @@
         <div id="resultadoPublicacoes"></div>
         <div id="resultadoRelevancia"></div>
         <div id="resultadoContexto"></div>
+        <div class="candidatos-card" id="blocoGoogleSheets">
+          <h3>Google Sheets</h3>
+
+          <p>
+            Depois que o DOU for processado e as publicações relevantes forem identificadas,
+            use o botão abaixo para enviar os dados para a planilha.
+          </p>
+
+          <div style="margin: 12px 0;">
+            <label for="urlAppsScript"><strong>URL do App da Web</strong></label>
+            <input
+              id="urlAppsScript"
+              type="url"
+              placeholder="https://script.google.com/macros/s/.../exec"
+              style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;"
+            >
+          </div>
+
+          <div style="margin: 12px 0;">
+            <label for="chaveApiSheets"><strong>Chave de acesso</strong></label>
+            <input
+              id="chaveApiSheets"
+              type="password"
+              placeholder="Digite a CHAVE_API"
+              autocomplete="off"
+              style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;"
+            >
+          </div>
+
+          <button
+            id="btnEnviarSheets"
+            type="button"
+            onclick="enviarParaGoogleSheets()"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;"
+          >
+            ENVIAR PARA GOOGLE SHEETS
+          </button>
+
+          <div id="statusGoogleSheets" style="margin-top:12px;"></div>
+        </div>
+
       `;
     }
 
@@ -2552,6 +2593,253 @@
         </div>
       `;
     }
+
+
+    function obterPublicacoesFinaisParaEnvio() {
+      const fonte =
+        window.contextosCorrigidosDOU &&
+        (
+          window.contextosCorrigidosDOU[1]?.length ||
+          window.contextosCorrigidosDOU[2]?.length ||
+          window.contextosCorrigidosDOU[3]?.length
+        )
+          ? window.contextosCorrigidosDOU
+          : window.relevantesDOU;
+
+      return [
+        ...(fonte?.[1] || []),
+        ...(fonte?.[2] || []),
+        ...(fonte?.[3] || [])
+      ];
+    }
+
+    function formatarDataDOUParaEnvio(valor) {
+      const texto = String(valor || '').trim();
+
+      if (!texto) {
+        return '';
+      }
+
+      const m = texto.match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+      );
+
+      if (m) {
+        return `${m[3]}/${m[2]}/${m[1]}`;
+      }
+
+      return texto;
+    }
+
+    function obterDataDOUInformada() {
+      const possiveisIds = [
+        'dataDOU',
+        'data_dou',
+        'dataDou',
+        'data'
+      ];
+
+      for (const id of possiveisIds) {
+        const el = document.getElementById(id);
+
+        if (
+          el &&
+          typeof el.value !== 'undefined' &&
+          String(el.value).trim()
+        ) {
+          return formatarDataDOUParaEnvio(
+            el.value
+          );
+        }
+      }
+
+      const dateInput =
+        document.querySelector(
+          'input[type="date"]'
+        );
+
+      if (
+        dateInput &&
+        String(dateInput.value).trim()
+      ) {
+        return formatarDataDOUParaEnvio(
+          dateInput.value
+        );
+      }
+
+      return '';
+    }
+
+    function obterNumeroDOUInformado() {
+      const possiveisIds = [
+        'numeroDOU',
+        'numero_dou',
+        'numeroDou'
+      ];
+
+      for (const id of possiveisIds) {
+        const el = document.getElementById(id);
+
+        if (
+          el &&
+          typeof el.value !== 'undefined' &&
+          String(el.value).trim()
+        ) {
+          return String(
+            el.value
+          ).trim();
+        }
+      }
+
+      return '';
+    }
+
+    async function enviarParaGoogleSheets() {
+      const status =
+        document.getElementById(
+          'statusGoogleSheets'
+        );
+
+      const botao =
+        document.getElementById(
+          'btnEnviarSheets'
+        );
+
+      const url =
+        String(
+          document.getElementById(
+            'urlAppsScript'
+          )?.value || ''
+        ).trim();
+
+      const chave =
+        String(
+          document.getElementById(
+            'chaveApiSheets'
+          )?.value || ''
+        );
+
+      const publicacoes =
+        obterPublicacoesFinaisParaEnvio();
+
+      if (!url) {
+        status.innerHTML =
+          '<strong>Informe a URL do App da Web.</strong>';
+
+        return;
+      }
+
+      if (!/\/exec(?:\?.*)?$/.test(url)) {
+        status.innerHTML =
+          '<strong>A URL informada não parece ser a URL /exec do App da Web.</strong>';
+
+        return;
+      }
+
+      if (!chave) {
+        status.innerHTML =
+          '<strong>Digite a chave de acesso.</strong>';
+
+        return;
+      }
+
+      if (
+        publicacoes.length === 0
+      ) {
+        status.innerHTML =
+          '<strong>Processe os PDFs antes de enviar para o Google Sheets.</strong>';
+
+        return;
+      }
+
+      const dataDOU =
+        obterDataDOUInformada();
+
+      const numeroDOU =
+        obterNumeroDOUInformado();
+
+      const publicacoesPreparadas =
+        publicacoes.map(
+          item => ({
+            data_dou:
+              dataDOU,
+            numero_dou:
+              numeroDOU,
+            secao:
+              item.secao || '',
+            indice:
+              item.indice ?? '',
+            cabecalho:
+              item.cabecalho ||
+              item.cabecalho_detectado ||
+              '',
+            classificacao:
+              item.classificacao || '',
+            contexto_orgao:
+              item.contexto_orgao ||
+              item.contexto_orgao_corrigido ||
+              '',
+            contexto_antt:
+              item.contexto_antt === true,
+            corpo:
+              item.corpo || '',
+            conteudo:
+              item.conteudo || ''
+          })
+        );
+
+      botao.disabled = true;
+
+      status.innerHTML =
+        `<strong>Enviando ${publicacoesPreparadas.length} publicações para o Google Sheets...</strong>`;
+
+      try {
+        await fetch(
+          url,
+          {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type':
+                'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify({
+              chave_api:
+                chave,
+              publicacoes:
+                publicacoesPreparadas
+            })
+          }
+        );
+
+        status.innerHTML = `
+          <strong>Envio realizado.</strong>
+          <br>
+          ${publicacoesPreparadas.length}
+          publicações foram enviadas ao Apps Script.
+          <br>
+          Confira a planilha para confirmar a gravação.
+        `;
+
+      } catch (erro) {
+        console.error(
+          'Erro ao enviar para Google Sheets:',
+          erro
+        );
+
+        status.innerHTML = `
+          <strong>Erro ao enviar.</strong>
+          <br>
+          ${escaparHTML(
+            erro.message ||
+            String(erro)
+          )}
+        `;
+      } finally {
+        botao.disabled = false;
+      }
+    }
+
 
     async function processarDOU() {
       if (!validarArquivos()) return;
