@@ -234,8 +234,22 @@
     .boletim-publicacao-corpo {
       white-space: pre-wrap;
       line-height: 1.55;
-      text-align: left;
+      text-align: justify;
+      text-justify: inter-word;
       font-size: 14px;
+    }
+
+    .boletim-banner-imagem {
+      width: 100%;
+      line-height: 0;
+      overflow: hidden;
+    }
+
+    .boletim-banner-imagem img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: cover;
     }
 
     .boletim-orgao-externo {
@@ -3344,20 +3358,11 @@
       previa.innerHTML = `
         <div class="boletim-preview">
 
-          <div class="boletim-banner">
-            <div class="antt">
-              ANTT
-              <div style="font-size:13px;font-weight:600;margin-top:4px;">
-                AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
-              </div>
-            </div>
-
-            <div class="dou-legis">
-              DIÁRIO OFICIAL DA UNIÃO e ANTTLegis
-              <div style="font-size:16px;font-weight:500;margin-top:4px;">
-                Publicações Oficiais
-              </div>
-            </div>
+          <div class="boletim-banner-imagem">
+            <img
+              src="banner-antt-dou.png"
+              alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
+            >
           </div>
 
           <div class="boletim-topo">
