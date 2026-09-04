@@ -285,19 +285,110 @@
     }
 
     function montarTextoPagina(itens) {
+      if (!Array.isArray(itens) || itens.length === 0) {
+        return '';
+      }
+
       let texto = '';
+      let yAnterior = null;
+      let xFimAnterior = null;
+      let alturaAnterior = null;
+
+      const toleranciaYMinima = 1.5;
 
       for (const item of itens) {
         const trecho = String(item.str || '');
-        if (!trecho) continue;
 
-        texto += trecho;
-        texto += item.hasEOL ? '\n' : ' ';
+        if (!trecho) {
+          continue;
+        }
+
+        const transform = Array.isArray(item.transform)
+          ? item.transform
+          : [];
+
+        const x = Number(transform[4] ?? 0);
+        const y = Number(transform[5] ?? 0);
+
+        const largura = Number(item.width ?? 0);
+        const altura = Math.abs(
+          Number(item.height ?? transform[3] ?? 0)
+        );
+
+        if (yAnterior === null) {
+          texto += trecho;
+        } else {
+          const toleranciaY = Math.max(
+            toleranciaYMinima,
+            Math.min(
+              4,
+              Math.max(
+                alturaAnterior || 0,
+                altura || 0
+              ) * 0.35
+            )
+          );
+
+          const mudouLinha =
+            Math.abs(y - yAnterior) > toleranciaY;
+
+          /*
+            O PDF do DOU usa colunas.
+
+            Quando o extrator muda de uma coluna para outra,
+            a coordenada Y também muda bastante. Por isso,
+            tratamos a mudança como nova linha, sem reordenar
+            os itens do PDF.js. Assim preservamos a ordem de
+            leitura entregue pelo próprio PDF.
+          */
+
+          if (mudouLinha) {
+            texto += '\n';
+          } else {
+            const distanciaX =
+              xFimAnterior === null
+                ? 0
+                : x - xFimAnterior;
+
+            /*
+              Se dois blocos estiverem na mesma linha,
+              inserimos espaço somente quando necessário.
+            */
+
+            if (
+              texto &&
+              !texto.endsWith('\n') &&
+              !texto.endsWith(' ') &&
+              distanciaX > 0.5
+            ) {
+              texto += ' ';
+            }
+          }
+
+          texto += trecho;
+        }
+
+        yAnterior = y;
+        xFimAnterior = x + largura;
+        alturaAnterior = altura;
+
+        /*
+          Alguns PDFs já sinalizam explicitamente fim de linha.
+          Mantemos esse sinal quando existir.
+        */
+
+        if (item.hasEOL) {
+          texto += '\n';
+          yAnterior = null;
+          xFimAnterior = null;
+          alturaAnterior = null;
+        }
       }
 
       return texto
         .replace(/[ \t]+\n/g, '\n')
         .replace(/[ \t]{2,}/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
         .trim();
     }
 
