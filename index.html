@@ -4,11 +4,16 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Boletim DOU - ANTT</title>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -17,7 +22,7 @@
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
       background: #f4f6f8;
-      color: #1f2937;
+      color: #111827;
     }
 
     .container {
@@ -76,6 +81,12 @@
       font-size: 18px;
     }
 
+    .arquivo-selecionado {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+
     button {
       width: 100%;
       border: none;
@@ -92,27 +103,65 @@
       opacity: 0.92;
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
     #resultado {
       display: none;
       margin-top: 25px;
-      padding: 18px;
-      border-radius: 10px;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
     }
 
-    .arquivo-selecionado {
+    .resultado-card {
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 12px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+    }
+
+    .sucesso {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+    }
+
+    .processando {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .erro {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .status-titulo {
+      font-weight: bold;
+      margin-bottom: 7px;
+    }
+
+    .progresso {
       margin-top: 8px;
       font-size: 13px;
       color: #4b5563;
     }
 
-    .erro {
-      background: #fef2f2 !important;
-      border-color: #fecaca !important;
-      color: #991b1b;
+    .resumo-final {
+      margin-top: 20px;
+      padding: 20px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
     }
+
+    .resumo-final h3 {
+      margin-top: 0;
+    }
+
   </style>
+
 </head>
 
 <body>
@@ -121,13 +170,16 @@
 
     <div class="card">
 
-      <h1>Boletim DOU - ANTT</h1>
+      <h1>
+        Boletim DOU - ANTT
+      </h1>
 
       <p class="subtitulo">
         Selecione os PDFs das Seções 1, 2 e 3 do Diário Oficial da União.
       </p>
 
       <div class="campo">
+
         <label for="dataDou">
           Data do DOU
         </label>
@@ -136,11 +188,15 @@
           type="date"
           id="dataDou"
         >
+
       </div>
+
 
       <div class="secao">
 
-        <h2>Seção 1</h2>
+        <h2>
+          Seção 1
+        </h2>
 
         <input
           type="file"
@@ -155,9 +211,12 @@
 
       </div>
 
+
       <div class="secao">
 
-        <h2>Seção 2</h2>
+        <h2>
+          Seção 2
+        </h2>
 
         <input
           type="file"
@@ -172,9 +231,12 @@
 
       </div>
 
+
       <div class="secao">
 
-        <h2>Seção 3</h2>
+        <h2>
+          Seção 3
+        </h2>
 
         <input
           type="file"
@@ -189,9 +251,11 @@
 
       </div>
 
+
       <button id="btnProcessar">
         PROCESSAR DOU
       </button>
+
 
       <div id="resultado"></div>
 
@@ -199,7 +263,32 @@
 
   </div>
 
+
+  <!--
+    PDF.js
+
+    A biblioteca é utilizada somente para ler
+    os PDFs selecionados no navegador.
+  -->
+
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+  ></script>
+
+
   <script>
+
+    // ============================================================
+    // CONFIGURAÇÃO DO PDF.JS
+    // ============================================================
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+
+    // ============================================================
+    // ELEMENTOS DA INTERFACE
+    // ============================================================
 
     const dataDou =
       document.getElementById('dataDou');
@@ -229,14 +318,65 @@
       document.getElementById('resultado');
 
 
+    // ============================================================
+    // MEMÓRIA DO SISTEMA
+    // ============================================================
+
+    window.textosDOU = {
+      1: '',
+      2: '',
+      3: ''
+    };
+
+
+    window.resultadoExtracaoDOU = {
+      1: null,
+      2: null,
+      3: null
+    };
+
+
+    // ============================================================
+    // MOSTRAR NOME DOS ARQUIVOS
+    // ============================================================
+
+    function mostrarNomeArquivo(
+      input,
+      elemento
+    ) {
+
+      if (!input.files[0]) {
+
+        elemento.textContent = '';
+
+        return;
+
+      }
+
+      const arquivo =
+        input.files[0];
+
+      const tamanhoMB =
+        (
+          arquivo.size /
+          1024 /
+          1024
+        ).toFixed(2);
+
+      elemento.textContent =
+        `Arquivo selecionado: ${arquivo.name} (${tamanhoMB} MB)`;
+
+    }
+
+
     pdfSecao1.addEventListener(
       'change',
       function () {
 
-        nomeSecao1.textContent =
-          pdfSecao1.files[0]
-            ? `Arquivo selecionado: ${pdfSecao1.files[0].name}`
-            : '';
+        mostrarNomeArquivo(
+          pdfSecao1,
+          nomeSecao1
+        );
 
       }
     );
@@ -246,10 +386,10 @@
       'change',
       function () {
 
-        nomeSecao2.textContent =
-          pdfSecao2.files[0]
-            ? `Arquivo selecionado: ${pdfSecao2.files[0].name}`
-            : '';
+        mostrarNomeArquivo(
+          pdfSecao2,
+          nomeSecao2
+        );
 
       }
     );
@@ -259,107 +399,614 @@
       'change',
       function () {
 
-        nomeSecao3.textContent =
-          pdfSecao3.files[0]
-            ? `Arquivo selecionado: ${pdfSecao3.files[0].name}`
-            : '';
+        mostrarNomeArquivo(
+          pdfSecao3,
+          nomeSecao3
+        );
 
       }
     );
 
 
-    btnProcessar.addEventListener(
-      'click',
-      function () {
+    // ============================================================
+    // INTERFACE DE STATUS
+    // ============================================================
 
-        resultado.classList.remove('erro');
+    function criarAreasResultado() {
 
-        if (!dataDou.value) {
+      resultado.style.display =
+        'block';
 
-          resultado.style.display =
-            'block';
+      resultado.innerHTML = `
 
-          resultado.classList.add(
-            'erro'
-          );
+        <div
+          id="statusSecao1"
+          class="resultado-card"
+        >
+          <div class="status-titulo">
+            Seção 1
+          </div>
 
-          resultado.innerHTML =
-            'Informe a data do DOU.';
-
-          return;
-
-        }
-
-
-        if (!pdfSecao1.files[0]) {
-
-          resultado.style.display =
-            'block';
-
-          resultado.classList.add(
-            'erro'
-          );
-
-          resultado.innerHTML =
-            'Selecione o PDF da Seção 1.';
-
-          return;
-
-        }
+          <div id="textoStatus1">
+            Aguardando...
+          </div>
+        </div>
 
 
-        if (!pdfSecao2.files[0]) {
+        <div
+          id="statusSecao2"
+          class="resultado-card"
+        >
+          <div class="status-titulo">
+            Seção 2
+          </div>
 
-          resultado.style.display =
-            'block';
-
-          resultado.classList.add(
-            'erro'
-          );
-
-          resultado.innerHTML =
-            'Selecione o PDF da Seção 2.';
-
-          return;
-
-        }
+          <div id="textoStatus2">
+            Aguardando...
+          </div>
+        </div>
 
 
-        if (!pdfSecao3.files[0]) {
+        <div
+          id="statusSecao3"
+          class="resultado-card"
+        >
+          <div class="status-titulo">
+            Seção 3
+          </div>
 
-          resultado.style.display =
-            'block';
-
-          resultado.classList.add(
-            'erro'
-          );
-
-          resultado.innerHTML =
-            'Selecione o PDF da Seção 3.';
-
-          return;
-
-        }
+          <div id="textoStatus3">
+            Aguardando...
+          </div>
+        </div>
 
 
-        resultado.style.display =
-          'block';
+        <div
+          id="resumoFinal"
+        ></div>
 
-        resultado.innerHTML = `
-          <strong>Arquivos recebidos com sucesso.</strong>
-          <br><br>
-          Data: ${dataDou.value}
-          <br>
-          Seção 1: ${pdfSecao1.files[0].name}
-          <br>
-          Seção 2: ${pdfSecao2.files[0].name}
-          <br>
-          Seção 3: ${pdfSecao3.files[0].name}
-          <br><br>
-          Próxima etapa: extrair o texto dos PDFs.
-        `;
+      `;
+
+    }
+
+
+    function atualizarStatus(
+      secao,
+      mensagem,
+      tipo = ''
+    ) {
+
+      const card =
+        document.getElementById(
+          `statusSecao${secao}`
+        );
+
+      const texto =
+        document.getElementById(
+          `textoStatus${secao}`
+        );
+
+      if (!card || !texto) {
+        return;
+      }
+
+      card.className =
+        'resultado-card';
+
+      if (tipo) {
+
+        card.classList.add(
+          tipo
+        );
 
       }
+
+      texto.innerHTML =
+        mensagem;
+
+    }
+
+
+    // ============================================================
+    // VALIDAÇÕES
+    // ============================================================
+
+    function validarArquivos() {
+
+      if (!dataDou.value) {
+
+        alert(
+          'Informe a data do DOU.'
+        );
+
+        return false;
+
+      }
+
+
+      if (!pdfSecao1.files[0]) {
+
+        alert(
+          'Selecione o PDF da Seção 1.'
+        );
+
+        return false;
+
+      }
+
+
+      if (!pdfSecao2.files[0]) {
+
+        alert(
+          'Selecione o PDF da Seção 2.'
+        );
+
+        return false;
+
+      }
+
+
+      if (!pdfSecao3.files[0]) {
+
+        alert(
+          'Selecione o PDF da Seção 3.'
+        );
+
+        return false;
+
+      }
+
+
+      return true;
+
+    }
+
+
+    // ============================================================
+    // EXTRAÇÃO DE UMA PÁGINA
+    // ============================================================
+
+    function montarTextoPagina(
+      itens
+    ) {
+
+      let texto =
+        '';
+
+
+      for (const item of itens) {
+
+        const trecho =
+          String(
+            item.str || ''
+          );
+
+
+        if (!trecho) {
+          continue;
+        }
+
+
+        texto +=
+          trecho;
+
+
+        if (item.hasEOL) {
+
+          texto +=
+            '\n';
+
+        } else {
+
+          texto +=
+            ' ';
+
+        }
+
+      }
+
+
+      return texto
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+
+    }
+
+
+    // ============================================================
+    // EXTRAÇÃO DO PDF
+    // ============================================================
+
+    async function extrairPDF(
+      arquivo,
+      secao
+    ) {
+
+      atualizarStatus(
+        secao,
+        'Carregando o PDF...',
+        'processando'
+      );
+
+
+      const arrayBuffer =
+        await arquivo.arrayBuffer();
+
+
+      const tarefaPDF =
+        pdfjsLib.getDocument({
+          data: arrayBuffer
+        });
+
+
+      const pdf =
+        await tarefaPDF.promise;
+
+
+      const totalPaginas =
+        pdf.numPages;
+
+
+      let textoCompleto =
+        '';
+
+
+      for (
+        let paginaNumero = 1;
+        paginaNumero <= totalPaginas;
+        paginaNumero++
+      ) {
+
+        atualizarStatus(
+          secao,
+          `
+            Extraindo página
+            <strong>${paginaNumero}</strong>
+            de
+            <strong>${totalPaginas}</strong>...
+          `,
+          'processando'
+        );
+
+
+        const pagina =
+          await pdf.getPage(
+            paginaNumero
+          );
+
+
+        const conteudo =
+          await pagina.getTextContent();
+
+
+        const textoPagina =
+          montarTextoPagina(
+            conteudo.items
+          );
+
+
+        textoCompleto +=
+          `\n${textoPagina}\n`;
+
+
+        pagina.cleanup();
+
+
+        /*
+          Pequena pausa a cada 10 páginas.
+
+          Isso evita travar a interface
+          durante PDFs muito grandes.
+        */
+
+        if (
+          paginaNumero % 10 === 0
+        ) {
+
+          await new Promise(
+            resolve =>
+              setTimeout(
+                resolve,
+                0
+              )
+          );
+
+        }
+
+      }
+
+
+      textoCompleto =
+        textoCompleto
+          .replace(/\r/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+
+
+      const quantidadeCaracteres =
+        textoCompleto.length;
+
+
+      window.textosDOU[secao] =
+        textoCompleto;
+
+
+      window.resultadoExtracaoDOU[secao] = {
+
+        secao:
+          String(secao),
+
+        nomeArquivo:
+          arquivo.name,
+
+        tamanhoArquivo:
+          arquivo.size,
+
+        paginas:
+          totalPaginas,
+
+        caracteres:
+          quantidadeCaracteres
+
+      };
+
+
+      atualizarStatus(
+        secao,
+        `
+          ✅ Extração concluída.
+          <br><br>
+
+          <strong>Páginas:</strong>
+          ${totalPaginas}
+
+          <br>
+
+          <strong>Caracteres extraídos:</strong>
+          ${quantidadeCaracteres.toLocaleString('pt-BR')}
+
+          <br>
+
+          <strong>Arquivo:</strong>
+          ${arquivo.name}
+        `,
+        'sucesso'
+      );
+
+
+      await pdf.destroy();
+
+
+      return {
+        texto:
+          textoCompleto,
+
+        paginas:
+          totalPaginas,
+
+        caracteres:
+          quantidadeCaracteres
+      };
+
+    }
+
+
+    // ============================================================
+    // RESUMO FINAL
+    // ============================================================
+
+    function mostrarResumoFinal() {
+
+      const resumo =
+        document.getElementById(
+          'resumoFinal'
+        );
+
+
+      const secao1 =
+        window.resultadoExtracaoDOU[1];
+
+      const secao2 =
+        window.resultadoExtracaoDOU[2];
+
+      const secao3 =
+        window.resultadoExtracaoDOU[3];
+
+
+      const totalPaginas =
+        secao1.paginas +
+        secao2.paginas +
+        secao3.paginas;
+
+
+      const totalCaracteres =
+        secao1.caracteres +
+        secao2.caracteres +
+        secao3.caracteres;
+
+
+      resumo.innerHTML = `
+
+        <div class="resumo-final">
+
+          <h3>
+            ✅ Extração concluída
+          </h3>
+
+          <strong>
+            DOU:
+          </strong>
+
+          ${dataDou.value}
+
+          <br><br>
+
+
+          <strong>
+            Seção 1:
+          </strong>
+
+          ${secao1.paginas} páginas
+
+          <br>
+
+
+          <strong>
+            Seção 2:
+          </strong>
+
+          ${secao2.paginas} páginas
+
+          <br>
+
+
+          <strong>
+            Seção 3:
+          </strong>
+
+          ${secao3.paginas} páginas
+
+          <br><br>
+
+
+          <strong>
+            Total de páginas:
+          </strong>
+
+          ${totalPaginas}
+
+          <br>
+
+
+          <strong>
+            Total de caracteres extraídos:
+          </strong>
+
+          ${totalCaracteres.toLocaleString('pt-BR')}
+
+          <br><br>
+
+          Próxima etapa:
+          identificar as publicações candidatas
+          de cada seção.
+
+        </div>
+
+      `;
+
+    }
+
+
+    // ============================================================
+    // PROCESSAMENTO PRINCIPAL
+    // ============================================================
+
+    async function processarDOU() {
+
+      if (!validarArquivos()) {
+        return;
+      }
+
+
+      criarAreasResultado();
+
+
+      btnProcessar.disabled =
+        true;
+
+
+      btnProcessar.textContent =
+        'PROCESSANDO...';
+
+
+      window.textosDOU = {
+        1: '',
+        2: '',
+        3: ''
+      };
+
+
+      window.resultadoExtracaoDOU = {
+        1: null,
+        2: null,
+        3: null
+      };
+
+
+      try {
+
+        /*
+          Processamos um PDF por vez.
+
+          Isso é proposital para reduzir
+          o consumo de memória do navegador.
+        */
+
+
+        await extrairPDF(
+          pdfSecao1.files[0],
+          1
+        );
+
+
+        await extrairPDF(
+          pdfSecao2.files[0],
+          2
+        );
+
+
+        await extrairPDF(
+          pdfSecao3.files[0],
+          3
+        );
+
+
+        mostrarResumoFinal();
+
+
+      } catch (erro) {
+
+        console.error(
+          erro
+        );
+
+
+        resultado.innerHTML += `
+
+          <div class="resultado-card erro">
+
+            <div class="status-titulo">
+              Erro durante o processamento
+            </div>
+
+            ${erro.message || erro}
+
+          </div>
+
+        `;
+
+      } finally {
+
+        btnProcessar.disabled =
+          false;
+
+
+        btnProcessar.textContent =
+          'PROCESSAR DOU';
+
+      }
+
+    }
+
+
+    // ============================================================
+    // BOTÃO PROCESSAR
+    // ============================================================
+
+    btnProcessar.addEventListener(
+      'click',
+      processarDOU
     );
 
   </script>
