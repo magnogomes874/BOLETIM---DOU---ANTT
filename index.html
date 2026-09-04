@@ -1784,38 +1784,25 @@
     }
 
     function mostrarResultadoRelevancia() {
-      const r1 =
-        window.relevantesDOU[1];
-
-      const r2 =
-        window.relevantesDOU[2];
-
-      const r3 =
-        window.relevantesDOU[3];
+      const r1 = window.relevantesDOU[1];
+      const r2 = window.relevantesDOU[2];
+      const r3 = window.relevantesDOU[3];
 
       const total =
         r1.length +
         r2.length +
         r3.length;
 
-      function contarTipo(
-        lista,
-        tipo
-      ) {
+      function contarTipo(lista, tipo) {
         return lista.filter(
           item =>
             item.classificacao === tipo
         ).length;
       }
 
-      function amostra(
-        lista
-      ) {
+      function amostra(lista) {
         return lista
-          .slice(
-            0,
-            12
-          )
+          .slice(0, 12)
           .map(
             item => `
               <div>
@@ -1830,6 +1817,54 @@
                 <small>
                   ${escaparHTML(
                     item.classificacao
+                  )}
+                </small>
+              </div>
+            `
+          )
+          .join('');
+      }
+
+      const todosRelevantes = [
+        ...r1,
+        ...r2,
+        ...r3
+      ];
+
+      const externos = todosRelevantes.filter(
+        item =>
+          item.classificacao ===
+          'OUTRO_ORGAO_CITA_ANTT'
+      );
+
+      function listarExternos(lista) {
+        if (lista.length === 0) {
+          return '<div>Nenhuma publicação.</div>';
+        }
+
+        return lista
+          .map(
+            item => `
+              <div style="padding:10px 0;border-bottom:1px solid #e5e7eb;">
+                <strong>
+                  Seção ${escaparHTML(item.secao)}
+                  | índice ${item.indice}
+                </strong>
+                <br>
+                ${escaparHTML(item.cabecalho)}
+                <br>
+                <small>
+                  Contexto:
+                  ${escaparHTML(
+                    item.contexto_orgao ||
+                    '(sem contexto identificado)'
+                  )}
+                </small>
+                <br>
+                <small>
+                  Motivo:
+                  ${escaparHTML(
+                    item.motivo || ''
                   )}
                 </small>
               </div>
@@ -1893,48 +1928,60 @@
           <br><br>
 
           <strong>
-            Classificação:
+            Classificação atual:
           </strong>
 
           <br>
+          Seção 1 —
+          ANTT_DIRETO:
+          ${contarTipo(r1, 'ANTT_DIRETO')}
+          |
+          OUTRO_ORGAO_CITA_ANTT:
+          ${contarTipo(r1, 'OUTRO_ORGAO_CITA_ANTT')}
 
+          <br>
+          Seção 2 —
+          ANTT_DIRETO:
+          ${contarTipo(r2, 'ANTT_DIRETO')}
+          |
+          OUTRO_ORGAO_CITA_ANTT:
+          ${contarTipo(r2, 'OUTRO_ORGAO_CITA_ANTT')}
+
+          <br>
+          Seção 3 —
+          ANTT_DIRETO:
+          ${contarTipo(r3, 'ANTT_DIRETO')}
+          |
+          OUTRO_ORGAO_CITA_ANTT:
+          ${contarTipo(r3, 'OUTRO_ORGAO_CITA_ANTT')}
+
+          <br><br>
+
+          <strong>Total geral:</strong>
+          <br>
           ANTT_DIRETO:
           ${
             (
-              contarTipo(
-                r1,
-                'ANTT_DIRETO'
-              ) +
-              contarTipo(
-                r2,
-                'ANTT_DIRETO'
-              ) +
-              contarTipo(
-                r3,
-                'ANTT_DIRETO'
-              )
+              contarTipo(r1, 'ANTT_DIRETO') +
+              contarTipo(r2, 'ANTT_DIRETO') +
+              contarTipo(r3, 'ANTT_DIRETO')
             ).toLocaleString('pt-BR')
           }
 
           <br>
-
           OUTRO_ORGAO_CITA_ANTT:
           ${
-            (
-              contarTipo(
-                r1,
-                'OUTRO_ORGAO_CITA_ANTT'
-              ) +
-              contarTipo(
-                r2,
-                'OUTRO_ORGAO_CITA_ANTT'
-              ) +
-              contarTipo(
-                r3,
-                'OUTRO_ORGAO_CITA_ANTT'
-              )
-            ).toLocaleString('pt-BR')
+            externos.length.toLocaleString('pt-BR')
           }
+
+          <div class="amostra">
+            <strong>
+              🔎 Todas as publicações classificadas como
+              OUTRO_ORGAO_CITA_ANTT
+            </strong>
+
+            ${listarExternos(externos)}
+          </div>
 
           <div class="amostra">
             <strong>
@@ -1963,7 +2010,6 @@
         </div>
       `;
     }
-
 
     async function processarDOU() {
       if (!validarArquivos()) return;
