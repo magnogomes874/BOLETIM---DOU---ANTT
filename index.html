@@ -3615,7 +3615,9 @@
       let atual = [];
 
       function fecharAtual() {
-        if (!atual.length) return;
+        if (!atual.length) {
+          return;
+        }
 
         blocos.push({
           tipo: 'paragrafo',
@@ -3629,9 +3631,13 @@
       }
 
       function ehLinhaIsolada(linha) {
-        if (!linha) return false;
+        if (!linha) {
+          return false;
+        }
 
-        if (/^\.{3}$/.test(linha)) return true;
+        if (/^\.{3}$/.test(linha)) {
+          return true;
+        }
 
         if (
           /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’-]{2,80}$/.test(linha) &&
@@ -3651,10 +3657,12 @@
 
         if (ehLinhaIsolada(linha)) {
           fecharAtual();
+
           blocos.push({
             tipo: 'isolada',
             texto: linha
           });
+
           continue;
         }
 
@@ -3678,12 +3686,16 @@
             return `
               <div
                 style="
-                  font-family:Calibri,Arial,sans-serif;
-                  font-size:11pt;
-                  line-height:1.45;
-                  color:#000000;
-                  text-align:left;
                   margin:0 0 6pt 0;
+                  padding:0;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  font-weight:400 !important;
+                  font-style:normal !important;
+                  line-height:1.35;
+                  color:#000000 !important;
+                  text-align:left;
+                  mso-line-height-rule:exactly;
                 "
               >${textoSeguro}</div>
             `;
@@ -3692,12 +3704,17 @@
           return `
             <div
               style="
-                font-family:Calibri,Arial,sans-serif;
-                font-size:11pt;
-                line-height:1.45;
-                color:#000000;
-                text-align:justify;
                 margin:0 0 9pt 0;
+                padding:0;
+                font-family:Calibri,Arial,sans-serif !important;
+                font-size:11pt !important;
+                font-weight:400 !important;
+                font-style:normal !important;
+                line-height:1.35;
+                color:#000000 !important;
+                text-align:justify;
+                text-justify:inter-word;
+                mso-line-height-rule:exactly;
               "
             >${textoSeguro}</div>
           `;
@@ -3710,33 +3727,40 @@
         return '';
       }
 
-      let htmlSecao = `
-        <div
-          style="
-            font-family:Calibri,Arial,sans-serif;
-            font-size:11pt;
-            color:#000000;
-            text-align:center;
-            text-decoration:underline;
-            margin:0 0 18pt 0;
-          "
-        >
-          SEÇÃO ${secao}
-        </div>
+      let conteudo = `
+        <tr>
+          <td
+            align="center"
+            style="
+              padding:18pt 12pt 8pt 12pt;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              font-weight:400 !important;
+              color:#000000 !important;
+              text-align:center;
+              text-decoration:underline;
+            "
+          >
+            SEÇÃO ${secao}
+          </td>
+        </tr>
 
-        <div
-          style="
-            font-family:Calibri,Arial,sans-serif;
-            font-size:11pt;
-            font-weight:bold;
-            color:#000000;
-            text-align:center;
-            text-transform:uppercase;
-            margin:0 0 16pt 0;
-          "
-        >
-          AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
-        </div>
+        <tr>
+          <td
+            align="center"
+            style="
+              padding:0 12pt 18pt 12pt;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              font-weight:400 !important;
+              color:#163a68 !important;
+              text-align:center;
+              text-transform:uppercase;
+            "
+          >
+            AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
+          </td>
+        </tr>
       `;
 
       let unidadeAtual = null;
@@ -3748,20 +3772,23 @@
 
         if (orgaoExterno) {
           if (orgaoExterno !== orgaoExternoAtual) {
-            htmlSecao += `
-              <div
-                style="
-                  font-family:Calibri,Arial,sans-serif;
-                  font-size:11pt;
-                  font-weight:bold;
-                  color:#163a68;
-                  text-align:center;
-                  text-transform:uppercase;
-                  margin:0 0 16pt 0;
-                "
-              >
-                ${escaparHTMLBoletim(orgaoExterno)}
-              </div>
+            conteudo += `
+              <tr>
+                <td
+                  align="center"
+                  style="
+                    padding:0 12pt 14pt 12pt;
+                    font-family:Calibri,Arial,sans-serif !important;
+                    font-size:11pt !important;
+                    font-weight:400 !important;
+                    color:#163a68 !important;
+                    text-align:center;
+                    text-transform:uppercase;
+                  "
+                >
+                  ${escaparHTMLBoletim(orgaoExterno)}
+                </td>
+              </tr>
             `;
 
             orgaoExternoAtual = orgaoExterno;
@@ -3771,19 +3798,23 @@
           orgaoExternoAtual = null;
 
           if (unidade && unidade !== unidadeAtual) {
-            htmlSecao += `
-              <div
-                style="
-                  font-family:Calibri,Arial,sans-serif;
-                  font-size:11pt;
-                  color:#163a68;
-                  text-align:center;
-                  text-transform:uppercase;
-                  margin:0 0 16pt 0;
-                "
-              >
-                ${escaparHTMLBoletim(unidade)}
-              </div>
+            conteudo += `
+              <tr>
+                <td
+                  align="center"
+                  style="
+                    padding:0 12pt 14pt 12pt;
+                    font-family:Calibri,Arial,sans-serif !important;
+                    font-size:11pt !important;
+                    font-weight:400 !important;
+                    color:#163a68 !important;
+                    text-align:center;
+                    text-transform:uppercase;
+                  "
+                >
+                  ${escaparHTMLBoletim(unidade)}
+                </td>
+              </tr>
             `;
 
             unidadeAtual = unidade;
@@ -3802,31 +3833,77 @@
           ''
         ).trim();
 
-        htmlSecao += `
-          <div style="margin:0 0 22pt 0;">
-            <div
+        conteudo += `
+          <tr>
+            <td
               style="
-                font-family:Calibri,Arial,sans-serif;
-                font-size:11pt;
-                font-weight:bold;
-                color:#000000;
-                text-transform:uppercase;
-                text-align:left;
-                margin:0 0 10pt 0;
+                padding:0 12pt 16pt 12pt;
+                font-family:Calibri,Arial,sans-serif !important;
+                font-size:11pt !important;
+                font-weight:400 !important;
+                color:#000000 !important;
               "
             >
-              ${escaparHTMLBoletim(titulo)}
-            </div>
+              <div
+                style="
+                  margin:0 0 9pt 0;
+                  padding:0;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  font-weight:700 !important;
+                  color:#000000 !important;
+                  text-align:left;
+                  text-transform:uppercase;
+                "
+              >
+                ${escaparHTMLBoletim(titulo)}
+              </div>
 
-            ${formatarCorpoOutlook(corpo)}
-          </div>
+              <div
+                style="
+                  margin:0;
+                  padding:0;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  font-weight:400 !important;
+                  color:#000000 !important;
+                "
+              >
+                ${formatarCorpoOutlook(corpo)}
+              </div>
+            </td>
+          </tr>
         `;
       }
 
       return `
-        <div style="margin:0 0 30pt 0;">
-          ${htmlSecao}
-        </div>
+        <table
+          role="presentation"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
+          width="100%"
+          style="
+            width:100%;
+            border-collapse:collapse;
+            border:1px solid #7f7f7f;
+            background:#ffffff;
+            font-family:Calibri,Arial,sans-serif !important;
+            font-size:11pt !important;
+            font-weight:400 !important;
+            color:#000000 !important;
+          "
+        >
+          ${conteudo}
+        </table>
+
+        <div
+          style="
+            height:16pt;
+            line-height:16pt;
+            font-size:1px;
+          "
+        >&nbsp;</div>
       `;
     }
 
@@ -3883,6 +3960,10 @@
             margin:0;
             padding:0;
             background:#ffffff;
+            font-family:Calibri,Arial,sans-serif !important;
+            font-size:11pt !important;
+            font-weight:400 !important;
+            color:#000000 !important;
           "
         >
           <table
@@ -3890,102 +3971,101 @@
             cellpadding="0"
             cellspacing="0"
             border="0"
-            width="100%"
+            width="700"
             style="
-              width:100%;
+              width:700px;
               border-collapse:collapse;
               background:#ffffff;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              font-weight:400 !important;
+              color:#000000 !important;
+              margin:0 auto;
             "
           >
             <tr>
-              <td align="center" style="padding:0;margin:0;">
-                <table
-                  role="presentation"
-                  cellpadding="0"
-                  cellspacing="0"
-                  border="0"
-                  width="850"
-                  style="
-                    width:850px;
-                    max-width:100%;
-                    border-collapse:collapse;
-                    background:#ffffff;
-                  "
-                >
-                  <tr>
-                    <td style="padding:0;margin:0;line-height:0;">
-                      ${
-                        bannerSrc
-                          ? `
-                            <img
-                              src="${bannerSrc}"
-                              alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
-                              width="850"
-                              style="
-                                display:block;
-                                width:100%;
-                                max-width:850px;
-                                height:auto;
-                                border:0;
-                                margin:0;
-                                padding:0;
-                              "
-                            >
-                          `
-                          : ''
-                      }
-                    </td>
-                  </tr>
+              <td
+                style="
+                  padding:0;
+                  margin:0;
+                  line-height:0;
+                  font-weight:400 !important;
+                "
+              >
+                ${
+                  bannerSrc
+                    ? `
+                      <img
+                        src="${bannerSrc}"
+                        alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
+                        width="700"
+                        style="
+                          display:block;
+                          width:700px;
+                          height:auto;
+                          border:0;
+                          margin:0;
+                          padding:0;
+                        "
+                      >
+                    `
+                    : ''
+                }
+              </td>
+            </tr>
 
-                  <tr>
-                    <td
-                      align="center"
-                      style="
-                        padding:16pt 12pt 10pt 12pt;
-                        font-family:Calibri,Arial,sans-serif;
-                        font-size:11pt;
-                        line-height:1.55;
-                        font-weight:bold;
-                        color:#000000;
-                      "
-                    >
-                      SECRETARIA-GERAL (SEGER)
-                      <br>
-                      GABINETE DO DIRETOR-GERAL (GAB-DG)
-                    </td>
-                  </tr>
+            <tr>
+              <td
+                align="center"
+                style="
+                  padding:14pt 10pt 9pt 10pt;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  line-height:1.35;
+                  font-weight:400 !important;
+                  color:#000000 !important;
+                  text-align:center;
+                "
+              >
+                SECRETARIA-GERAL (SEGER)
+                <br>
+                GABINETE DO DIRETOR-GERAL (GAB-DG)
+              </td>
+            </tr>
 
-                  <tr>
-                    <td
-                      align="center"
-                      bgcolor="#233f73"
-                      style="
-                        background:#233f73;
-                        color:#ffffff;
-                        font-family:'Segoe UI',Arial,sans-serif;
-                        font-size:13pt;
-                        font-weight:bold;
-                        text-align:center;
-                        padding:13pt 10pt;
-                      "
-                    >
-                      ${escaparHTMLBoletim(tituloFaixa)}
-                    </td>
-                  </tr>
+            <tr>
+              <td
+                align="center"
+                bgcolor="#233f73"
+                style="
+                  background:#233f73 !important;
+                  color:#ffffff !important;
+                  font-family:'Segoe UI',Arial,sans-serif !important;
+                  font-size:13pt !important;
+                  font-weight:700 !important;
+                  text-align:center;
+                  padding:11pt 8pt;
+                  line-height:1.2;
+                "
+              >
+                ${escaparHTMLBoletim(tituloFaixa)}
+              </td>
+            </tr>
 
-                  <tr>
-                    <td
-                      style="
-                        padding:24pt 18pt 30pt 18pt;
-                        background:#ffffff;
-                      "
-                    >
-                      ${montarSecaoOutlook(1, publicacoes[1])}
-                      ${montarSecaoOutlook(2, publicacoes[2])}
-                      ${montarSecaoOutlook(3, publicacoes[3])}
-                    </td>
-                  </tr>
-                </table>
+            <tr>
+              <td
+                style="
+                  padding:14pt 0 0 0;
+                  background:#ffffff;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  font-weight:400 !important;
+                  color:#000000 !important;
+                "
+              >
+                ${montarSecaoOutlook(1, publicacoes[1])}
+                ${montarSecaoOutlook(2, publicacoes[2])}
+                ${montarSecaoOutlook(3, publicacoes[3])}
               </td>
             </tr>
           </table>
