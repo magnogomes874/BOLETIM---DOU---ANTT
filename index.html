@@ -316,6 +316,34 @@
       object-fit: contain !important;
     }
 
+  
+    #previaBoletim .boletim-publicacao-corpo {
+      white-space: normal !important;
+      text-align: justify !important;
+      text-justify: inter-word !important;
+      line-height: 1.55 !important;
+      width: 100% !important;
+    }
+
+    #previaBoletim .boletim-paragrafo {
+      display: block;
+      width: 100%;
+      margin: 0 0 12px 0;
+      padding: 0;
+      text-align: justify !important;
+      text-justify: inter-word !important;
+      line-height: 1.55;
+    }
+
+    #previaBoletim .boletim-linha-isolada {
+      display: block;
+      width: 100%;
+      margin: 0 0 6px 0;
+      padding: 0;
+      text-align: left !important;
+      line-height: 1.55;
+    }
+
   </style>
 </head>
 
@@ -3238,6 +3266,85 @@
       };
     }
 
+
+    function formatarCorpoBoletim(texto) {
+      const bruto = String(texto || '')
+        .replace(/\r\n?/g, '\n')
+        .trim();
+
+      if (!bruto) {
+        return '';
+      }
+
+      const linhas = bruto
+        .split('\n')
+        .map(linha => linha.trim());
+
+      const blocos = [];
+      let atual = [];
+
+      function fecharAtual() {
+        if (atual.length) {
+          blocos.push({
+            tipo: 'paragrafo',
+            texto: atual.join(' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+          });
+          atual = [];
+        }
+      }
+
+      function ehLinhaIsolada(linha) {
+        if (!linha) return false;
+
+        if (/^\.{3}$/.test(linha)) return true;
+
+        if (/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’-]{2,80}$/.test(linha) &&
+            !/[.;:,]$/.test(linha)) {
+          return true;
+        }
+
+        return false;
+      }
+
+      for (const linha of linhas) {
+        if (!linha) {
+          fecharAtual();
+          continue;
+        }
+
+        if (ehLinhaIsolada(linha)) {
+          fecharAtual();
+          blocos.push({
+            tipo: 'isolada',
+            texto: linha
+          });
+          continue;
+        }
+
+        atual.push(linha);
+
+        if (
+          /[.!?;:]$/.test(linha) ||
+          /\)\s*$/.test(linha)
+        ) {
+          fecharAtual();
+        }
+      }
+
+      fecharAtual();
+
+      return blocos.map(bloco => {
+        const classe =
+          bloco.tipo === 'isolada'
+            ? 'boletim-linha-isolada'
+            : 'boletim-paragrafo';
+
+        return `<div class="${classe}">${escaparHTMLBoletim(bloco.texto)}</div>`;
+      }).join('');
+    }
+
     function montarSecaoBoletim(secao, itens) {
       if (!itens.length) {
         return '';
@@ -3317,7 +3424,7 @@
             </div>
 
             <div class="boletim-publicacao-corpo">
-              ${escaparHTMLBoletim(corpo)}
+              ${formatarCorpoBoletim(corpo)}
             </div>
           </article>
         `;
