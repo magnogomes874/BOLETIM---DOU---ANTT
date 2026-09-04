@@ -387,12 +387,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <script type="module">
-    import { PublicClientApplication } from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@5.16.0/+esm";
-    window.MSALBoletim = { PublicClientApplication };
-  </script>
-
-
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -510,12 +504,12 @@
           </button>
 
           <button
-            id="btnPrepararOutlook"
+            id="btnCopiarOutlook"
             type="button"
-            onclick="prepararEmailOutlook()"
+            onclick="copiarBoletimParaOutlook()"
             style="padding:12px 18px;font-weight:700;cursor:pointer;"
           >
-            PREPARAR E-MAIL NO OUTLOOK
+            COPIAR BOLETIM PARA O OUTLOOK
           </button>
 
           <div id="statusBoletim" style="margin-top:12px;"></div>
@@ -3589,213 +3583,517 @@
 
 
     // ============================================================
-    // INTEGRAÇÃO COM O OUTLOOK / MICROSOFT GRAPH
+    // COPIAR BOLETIM FORMATADO PARA O OUTLOOK
     // ============================================================
-    const OUTLOOK_CLIENT_ID = '288d48f0-4abd-4401-a988-f042a463f9b0';
-    const OUTLOOK_TENANT_ID = '87bbe9de-a892-4cde-a466-88f982fbc490';
-    const OUTLOOK_REDIRECT_URI = 'https://magnogomes874.github.io/BOLETIM---DOU---ANTT/';
-    const OUTLOOK_SCOPES = ['User.Read', 'Mail.ReadWrite'];
-    let msalOutlook = null;
-    let inicializacaoOutlookPromise = null;
 
     function statusOutlook(mensagem, erro = false) {
       const elemento = document.getElementById('statusOutlook');
-      if (!elemento) return;
+
+      if (!elemento) {
+        return;
+      }
+
       elemento.innerHTML = erro
         ? `<strong style="color:#b91c1c;">${escaparHTMLBoletim(mensagem)}</strong>`
         : `<strong>${escaparHTMLBoletim(mensagem)}</strong>`;
     }
 
-    async function aguardarMSALBoletim() {
-      if (window.MSALBoletim?.PublicClientApplication) return window.MSALBoletim;
-      for (let i = 0; i < 100; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        if (window.MSALBoletim?.PublicClientApplication) return window.MSALBoletim;
-      }
-      throw new Error('Não foi possível carregar a biblioteca de autenticação da Microsoft.');
-    }
-
-    async function inicializarOutlook() {
-      if (msalOutlook) return msalOutlook;
-      if (inicializacaoOutlookPromise) return inicializacaoOutlookPromise;
-      inicializacaoOutlookPromise = (async () => {
-        const MSAL = await aguardarMSALBoletim();
-        const instancia = new MSAL.PublicClientApplication({
-          auth: {
-            clientId: OUTLOOK_CLIENT_ID,
-            authority: `https://login.microsoftonline.com/${OUTLOOK_TENANT_ID}`,
-            redirectUri: OUTLOOK_REDIRECT_URI
-          },
-          cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
-        });
-        await instancia.initialize();
-        const respostaRedirect = await instancia.handleRedirectPromise();
-        if (respostaRedirect?.account) instancia.setActiveAccount(respostaRedirect.account);
-        if (!instancia.getActiveAccount()) {
-          const contas = instancia.getAllAccounts();
-          if (contas.length) instancia.setActiveAccount(contas[0]);
-        }
-        msalOutlook = instancia;
-        return instancia;
-      })();
-      return inicializacaoOutlookPromise;
-    }
-
-    function obterBannerBase64Boletim() {
-      const imagem = document.querySelector('#previaBoletim .boletim-banner-imagem img');
-      const src = String(imagem?.getAttribute('src') || '');
-      const prefixo = 'data:image/png;base64,';
-      return src.startsWith(prefixo) ? src.slice(prefixo.length) : '';
-    }
-
     function formatarCorpoOutlook(texto) {
-      const bruto = String(texto || '').replace(/\r\n?/g, '\n').trim();
-      if (!bruto) return '';
-      const linhas = bruto.split('\n').map(l => l.trim());
+      const bruto = String(texto || '')
+        .replace(/\r\n?/g, '\n')
+        .trim();
+
+      if (!bruto) {
+        return '';
+      }
+
+      const linhas = bruto
+        .split('\n')
+        .map(linha => linha.trim());
+
       const blocos = [];
       let atual = [];
+
       function fecharAtual() {
         if (!atual.length) return;
-        blocos.push({ tipo:'paragrafo', texto: atual.join(' ').replace(/\s+/g,' ').trim() });
+
+        blocos.push({
+          tipo: 'paragrafo',
+          texto: atual
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        });
+
         atual = [];
       }
+
       function ehLinhaIsolada(linha) {
-        return /^\.{3}$/.test(linha) || (/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’-]{2,80}$/.test(linha) && !/[.;:,]$/.test(linha));
+        if (!linha) return false;
+
+        if (/^\.{3}$/.test(linha)) return true;
+
+        if (
+          /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’-]{2,80}$/.test(linha) &&
+          !/[.;:,]$/.test(linha)
+        ) {
+          return true;
+        }
+
+        return false;
       }
+
       for (const linha of linhas) {
-        if (!linha) { fecharAtual(); continue; }
-        if (ehLinhaIsolada(linha)) { fecharAtual(); blocos.push({tipo:'isolada',texto:linha}); continue; }
+        if (!linha) {
+          fecharAtual();
+          continue;
+        }
+
+        if (ehLinhaIsolada(linha)) {
+          fecharAtual();
+          blocos.push({
+            tipo: 'isolada',
+            texto: linha
+          });
+          continue;
+        }
+
         atual.push(linha);
-        if (/[.!?;:]$/.test(linha) || /\)\s*$/.test(linha)) fecharAtual();
+
+        if (
+          /[.!?;:]$/.test(linha) ||
+          /\)\s*$/.test(linha)
+        ) {
+          fecharAtual();
+        }
       }
+
       fecharAtual();
-      return blocos.map(b => b.tipo === 'isolada'
-        ? `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.45;color:#000000;text-align:left;margin:0 0 6pt 0;">${escaparHTMLBoletim(b.texto)}</div>`
-        : `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.45;color:#000000;text-align:justify;margin:0 0 9pt 0;">${escaparHTMLBoletim(b.texto)}</div>`
-      ).join('');
+
+      return blocos
+        .map(bloco => {
+          const textoSeguro = escaparHTMLBoletim(bloco.texto);
+
+          if (bloco.tipo === 'isolada') {
+            return `
+              <div
+                style="
+                  font-family:Calibri,Arial,sans-serif;
+                  font-size:11pt;
+                  line-height:1.45;
+                  color:#000000;
+                  text-align:left;
+                  margin:0 0 6pt 0;
+                "
+              >${textoSeguro}</div>
+            `;
+          }
+
+          return `
+            <div
+              style="
+                font-family:Calibri,Arial,sans-serif;
+                font-size:11pt;
+                line-height:1.45;
+                color:#000000;
+                text-align:justify;
+                margin:0 0 9pt 0;
+              "
+            >${textoSeguro}</div>
+          `;
+        })
+        .join('');
     }
 
     function montarSecaoOutlook(secao, itens) {
-      if (!itens.length) return '';
-      let h = `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000;text-align:center;text-decoration:underline;margin:0 0 18pt 0;">SEÇÃO ${secao}</div>`;
-      h += `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;font-weight:bold;color:#163a68;text-align:center;text-transform:uppercase;margin:0 0 16pt 0;">AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES</div>`;
-      let unidadeAtual=null, orgaoExternoAtual=null;
+      if (!itens.length) {
+        return '';
+      }
+
+      let htmlSecao = `
+        <div
+          style="
+            font-family:Calibri,Arial,sans-serif;
+            font-size:11pt;
+            color:#000000;
+            text-align:center;
+            text-decoration:underline;
+            margin:0 0 18pt 0;
+          "
+        >
+          SEÇÃO ${secao}
+        </div>
+
+        <div
+          style="
+            font-family:Calibri,Arial,sans-serif;
+            font-size:11pt;
+            font-weight:bold;
+            color:#000000;
+            text-align:center;
+            text-transform:uppercase;
+            margin:0 0 16pt 0;
+          "
+        >
+          AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
+        </div>
+      `;
+
+      let unidadeAtual = null;
+      let orgaoExternoAtual = null;
+
       for (const item of itens) {
         const unidade = detectarUnidadeANTT(item);
         const orgaoExterno = detectarOrgaoExterno(item);
+
         if (orgaoExterno) {
           if (orgaoExterno !== orgaoExternoAtual) {
-            h += `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;font-weight:bold;color:#163a68;text-align:center;text-transform:uppercase;margin:0 0 16pt 0;">${escaparHTMLBoletim(orgaoExterno)}</div>`;
-            orgaoExternoAtual = orgaoExterno; unidadeAtual = null;
+            htmlSecao += `
+              <div
+                style="
+                  font-family:Calibri,Arial,sans-serif;
+                  font-size:11pt;
+                  font-weight:bold;
+                  color:#163a68;
+                  text-align:center;
+                  text-transform:uppercase;
+                  margin:0 0 16pt 0;
+                "
+              >
+                ${escaparHTMLBoletim(orgaoExterno)}
+              </div>
+            `;
+
+            orgaoExternoAtual = orgaoExterno;
+            unidadeAtual = null;
           }
         } else {
           orgaoExternoAtual = null;
+
           if (unidade && unidade !== unidadeAtual) {
-            h += `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#163a68;text-align:center;text-transform:uppercase;margin:0 0 16pt 0;">${escaparHTMLBoletim(unidade)}</div>`;
+            htmlSecao += `
+              <div
+                style="
+                  font-family:Calibri,Arial,sans-serif;
+                  font-size:11pt;
+                  color:#163a68;
+                  text-align:center;
+                  text-transform:uppercase;
+                  margin:0 0 16pt 0;
+                "
+              >
+                ${escaparHTMLBoletim(unidade)}
+              </div>
+            `;
+
             unidadeAtual = unidade;
           }
         }
-        const titulo = String(item.cabecalho || item.cabecalho_detectado || '').trim();
-        const corpo = String(item.corpo || item.conteudo || '').trim();
-        h += `<div style="margin:0 0 22pt 0;"><div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;font-weight:bold;color:#000000;text-transform:uppercase;text-align:left;margin:0 0 10pt 0;">${escaparHTMLBoletim(titulo)}</div>${formatarCorpoOutlook(corpo)}</div>`;
+
+        const titulo = String(
+          item.cabecalho ||
+          item.cabecalho_detectado ||
+          ''
+        ).trim();
+
+        const corpo = String(
+          item.corpo ||
+          item.conteudo ||
+          ''
+        ).trim();
+
+        htmlSecao += `
+          <div style="margin:0 0 22pt 0;">
+            <div
+              style="
+                font-family:Calibri,Arial,sans-serif;
+                font-size:11pt;
+                font-weight:bold;
+                color:#000000;
+                text-transform:uppercase;
+                text-align:left;
+                margin:0 0 10pt 0;
+              "
+            >
+              ${escaparHTMLBoletim(titulo)}
+            </div>
+
+            ${formatarCorpoOutlook(corpo)}
+          </div>
+        `;
       }
-      return `<div style="margin:0 0 30pt 0;">${h}</div>`;
+
+      return `
+        <div style="margin:0 0 30pt 0;">
+          ${htmlSecao}
+        </div>
+      `;
     }
 
-    function montarHtmlOutlook() {
-      const numero = String(document.getElementById('numeroDouBoletim')?.value || '').trim();
-      const dataIso = String(document.getElementById('dataDouBoletim')?.value || '').trim();
-      if (!numero) throw new Error('Informe o número do DOU antes de preparar o e-mail.');
-      if (!dataIso) throw new Error('Informe a data do DOU antes de preparar o e-mail.');
+    function montarHtmlOutlookParaCopia() {
+      const numero = String(
+        document.getElementById('numeroDouBoletim')?.value || ''
+      ).trim();
+
+      const dataIso = String(
+        document.getElementById('dataDouBoletim')?.value || ''
+      ).trim();
+
+      if (!numero) {
+        throw new Error(
+          'Informe o número do DOU antes de copiar o boletim.'
+        );
+      }
+
+      if (!dataIso) {
+        throw new Error(
+          'Informe a data do DOU antes de copiar o boletim.'
+        );
+      }
+
       const publicacoes = obterPublicacoesParaBoletim();
-      const total = publicacoes[1].length + publicacoes[2].length + publicacoes[3].length;
-      if (!total) throw new Error('Processe os PDFs antes de preparar o e-mail.');
+
+      const total =
+        publicacoes[1].length +
+        publicacoes[2].length +
+        publicacoes[3].length;
+
+      if (total === 0) {
+        throw new Error(
+          'Processe os PDFs antes de copiar o boletim.'
+        );
+      }
+
       const dataFormatada = formatarDataExtenso(dataIso);
-      const faixa = `DIÁRIO OFICIAL DA UNIÃO – DOU Nº ${numero}, ${dataFormatada.diaSemana}, ${dataFormatada.dataExtenso}`;
-      return `<div style="margin:0;padding:0;background:#ffffff;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background:#ffffff;"><tr><td align="center"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="850" style="width:850px;max-width:100%;border-collapse:collapse;background:#ffffff;"><tr><td style="padding:0;line-height:0;"><img src="cid:bannerANTTDOU" width="850" alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais" style="display:block;width:100%;max-width:850px;height:auto;border:0;"></td></tr><tr><td align="center" style="padding:16pt 12pt 10pt;font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.55;font-weight:bold;color:#000000;">SECRETARIA-GERAL (SEGER)<br>GABINETE DO DIRETOR-GERAL (GAB-DG)</td></tr><tr><td align="center" bgcolor="#233f73" style="background:#233f73;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:13pt;font-weight:bold;text-align:center;padding:13pt 10pt;">${escaparHTMLBoletim(faixa)}</td></tr><tr><td style="padding:24pt 18pt 30pt;background:#ffffff;">${montarSecaoOutlook(1, publicacoes[1])}${montarSecaoOutlook(2, publicacoes[2])}${montarSecaoOutlook(3, publicacoes[3])}</td></tr></table></td></tr></table></div>`;
+
+      const tituloFaixa =
+        `DIÁRIO OFICIAL DA UNIÃO – DOU Nº ${numero}, ${dataFormatada.diaSemana}, ${dataFormatada.dataExtenso}`;
+
+      const banner = document.querySelector(
+        '#previaBoletim .boletim-banner-imagem img'
+      );
+
+      const bannerSrc = String(
+        banner?.getAttribute('src') || ''
+      );
+
+      return `
+        <div
+          style="
+            margin:0;
+            padding:0;
+            background:#ffffff;
+          "
+        >
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+            style="
+              width:100%;
+              border-collapse:collapse;
+              background:#ffffff;
+            "
+          >
+            <tr>
+              <td align="center" style="padding:0;margin:0;">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="850"
+                  style="
+                    width:850px;
+                    max-width:100%;
+                    border-collapse:collapse;
+                    background:#ffffff;
+                  "
+                >
+                  <tr>
+                    <td style="padding:0;margin:0;line-height:0;">
+                      ${
+                        bannerSrc
+                          ? `
+                            <img
+                              src="${bannerSrc}"
+                              alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
+                              width="850"
+                              style="
+                                display:block;
+                                width:100%;
+                                max-width:850px;
+                                height:auto;
+                                border:0;
+                                margin:0;
+                                padding:0;
+                              "
+                            >
+                          `
+                          : ''
+                      }
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        padding:16pt 12pt 10pt 12pt;
+                        font-family:Calibri,Arial,sans-serif;
+                        font-size:11pt;
+                        line-height:1.55;
+                        font-weight:bold;
+                        color:#000000;
+                      "
+                    >
+                      SECRETARIA-GERAL (SEGER)
+                      <br>
+                      GABINETE DO DIRETOR-GERAL (GAB-DG)
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      align="center"
+                      bgcolor="#233f73"
+                      style="
+                        background:#233f73;
+                        color:#ffffff;
+                        font-family:'Segoe UI',Arial,sans-serif;
+                        font-size:13pt;
+                        font-weight:bold;
+                        text-align:center;
+                        padding:13pt 10pt;
+                      "
+                    >
+                      ${escaparHTMLBoletim(tituloFaixa)}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      style="
+                        padding:24pt 18pt 30pt 18pt;
+                        background:#ffffff;
+                      "
+                    >
+                      ${montarSecaoOutlook(1, publicacoes[1])}
+                      ${montarSecaoOutlook(2, publicacoes[2])}
+                      ${montarSecaoOutlook(3, publicacoes[3])}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `;
     }
 
-    async function obterTokenOutlook() {
-      const instancia = await inicializarOutlook();
-      let conta = instancia.getActiveAccount();
-      if (!conta) {
-        const contas = instancia.getAllAccounts();
-        if (contas.length) { conta = contas[0]; instancia.setActiveAccount(conta); }
-      }
-      if (!conta) {
-        sessionStorage.setItem('boletimOutlookAcaoPendente','preparar');
-        await instancia.loginRedirect({ scopes: OUTLOOK_SCOPES, redirectUri: OUTLOOK_REDIRECT_URI });
-        return null;
-      }
+    async function copiarBoletimParaOutlook() {
+      const botao = document.getElementById('btnCopiarOutlook');
+
       try {
-        const r = await instancia.acquireTokenSilent({ scopes: OUTLOOK_SCOPES, account: conta });
-        return r.accessToken;
-      } catch (erro) {
-        sessionStorage.setItem('boletimOutlookAcaoPendente','preparar');
-        await instancia.acquireTokenRedirect({ scopes: OUTLOOK_SCOPES, account: conta, redirectUri: OUTLOOK_REDIRECT_URI });
-        return null;
-      }
-    }
+        if (botao) {
+          botao.disabled = true;
+          botao.textContent = 'COPIANDO...';
+        }
 
-    async function criarRascunhoOutlook(token) {
-      const bannerBase64 = obterBannerBase64Boletim();
-      if (!bannerBase64) throw new Error('Gere a prévia do boletim antes de preparar o e-mail no Outlook.');
-      const mensagem = {
-        subject:'',
-        body:{ contentType:'HTML', content: montarHtmlOutlook() },
-        toRecipients:[], ccRecipients:[], bccRecipients:[],
-        attachments:[{ '@odata.type':'#microsoft.graph.fileAttachment', name:'banner-antt-dou.png', contentType:'image/png', isInline:true, contentId:'bannerANTTDOU', contentBytes:bannerBase64 }]
-      };
-      const resposta = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
-        method:'POST',
-        headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
-        body:JSON.stringify(mensagem)
-      });
-      if (!resposta.ok) {
-        let detalhe='';
-        try { const e=await resposta.json(); detalhe=e?.error?.message || ''; } catch(_) {}
-        throw new Error(detalhe || `O Microsoft Graph retornou o erro ${resposta.status}.`);
-      }
-      return resposta.json();
-    }
+        statusOutlook(
+          'Preparando o boletim formatado para copiar...'
+        );
 
-    async function prepararEmailOutlook() {
-      const botao = document.getElementById('btnPrepararOutlook');
-      try {
-        if (botao) { botao.disabled=true; botao.textContent='PREPARANDO...'; }
-        statusOutlook('Preparando o rascunho no Outlook...');
         const previa = document.getElementById('previaBoletim');
-        if (!previa || !previa.innerHTML.trim()) gerarPreviaBoletim();
-        const previa2 = document.getElementById('previaBoletim');
-        if (!previa2 || !previa2.innerHTML.trim()) throw new Error('Gere a prévia do boletim antes de preparar o e-mail.');
-        const token = await obterTokenOutlook();
-        if (!token) return;
-        const rascunho = await criarRascunhoOutlook(token);
-        sessionStorage.removeItem('boletimOutlookAcaoPendente');
-        statusOutlook('Rascunho criado no Outlook. Para, CC, CCO e Assunto ficaram em branco.');
-        window.location.href = rascunho?.webLink || 'https://outlook.office.com/mail/drafts';
+
+        if (
+          !previa ||
+          !previa.innerHTML.trim()
+        ) {
+          gerarPreviaBoletim();
+        }
+
+        const html = montarHtmlOutlookParaCopia();
+
+        const areaTemporaria = document.createElement('div');
+        areaTemporaria.innerHTML = html;
+
+        const textoSimples =
+          areaTemporaria.innerText ||
+          areaTemporaria.textContent ||
+          '';
+
+        if (
+          navigator.clipboard &&
+          typeof ClipboardItem !== 'undefined' &&
+          navigator.clipboard.write
+        ) {
+          const item = new ClipboardItem({
+            'text/html': new Blob(
+              [html],
+              { type: 'text/html' }
+            ),
+            'text/plain': new Blob(
+              [textoSimples],
+              { type: 'text/plain' }
+            )
+          });
+
+          await navigator.clipboard.write([item]);
+        } else {
+          const container = document.createElement('div');
+
+          container.style.position = 'fixed';
+          container.style.left = '-99999px';
+          container.style.top = '0';
+          container.innerHTML = html;
+
+          document.body.appendChild(container);
+
+          const range = document.createRange();
+          range.selectNodeContents(container);
+
+          const selecao = window.getSelection();
+          selecao.removeAllRanges();
+          selecao.addRange(range);
+
+          const copiado = document.execCommand('copy');
+
+          selecao.removeAllRanges();
+          container.remove();
+
+          if (!copiado) {
+            throw new Error(
+              'O navegador não permitiu copiar o conteúdo automaticamente.'
+            );
+          }
+        }
+
+        statusOutlook(
+          'Boletim copiado. Abra um novo e-mail no Outlook e pressione Ctrl+V.'
+        );
       } catch (erro) {
-        console.error('Erro ao preparar o Outlook:', erro);
-        statusOutlook(erro.message || 'Não foi possível preparar o rascunho no Outlook.', true);
+        console.error(
+          'Erro ao copiar o boletim para o Outlook:',
+          erro
+        );
+
+        statusOutlook(
+          erro.message ||
+          'Não foi possível copiar o boletim para o Outlook.',
+          true
+        );
       } finally {
-        if (botao) { botao.disabled=false; botao.textContent='PREPARAR E-MAIL NO OUTLOOK'; }
+        if (botao) {
+          botao.disabled = false;
+          botao.textContent =
+            'COPIAR BOLETIM PARA O OUTLOOK';
+        }
       }
     }
 
-    async function continuarOutlookAposRedirect() {
-      try {
-        await inicializarOutlook();
-        if (sessionStorage.getItem('boletimOutlookAcaoPendente') !== 'preparar') return;
-        const previa = document.getElementById('previaBoletim');
-        if (!previa || !previa.innerHTML.trim()) gerarPreviaBoletim();
-        await prepararEmailOutlook();
-      } catch (erro) {
-        console.error('Erro após autenticação do Outlook:', erro);
-        statusOutlook(erro.message || 'Não foi possível concluir a autenticação do Outlook.', true);
-      }
-    }
-
-    window.addEventListener('load', continuarOutlookAposRedirect);
 
     async function processarDOU() {
       if (!validarArquivos()) return;
