@@ -202,6 +202,7 @@
     window.candidatosDOU = { 1: [], 2: [], 3: [] };
     window.publicacoesDOU = { 1: [], 2: [], 3: [] };
     window.relevantesDOU = { 1: [], 2: [], 3: [] };
+    window.contextosCorrigidosDOU = { 1: [], 2: [], 3: [] };
 
     function mostrarNomeArquivo(input, elemento) {
       if (!input.files[0]) {
@@ -250,6 +251,7 @@
         <div id="resultadoCandidatos"></div>
         <div id="resultadoPublicacoes"></div>
         <div id="resultadoRelevancia"></div>
+        <div id="resultadoContexto"></div>
       `;
     }
 
@@ -2011,6 +2013,570 @@
       `;
     }
 
+
+    // ============================================================
+    // MIGRAÇÃO DO NODE:
+    // CODE - CORRIGIR CONTEXTO DO ÓRGÃO
+    // ============================================================
+
+    function normalizarContexto(texto) {
+      return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\r/g, '')
+        .replace(/[ \t]+/g, ' ')
+        .toUpperCase()
+        .trim();
+    }
+
+    function limparLinhaContexto(texto) {
+      return String(texto || '')
+        .replace(/\r/g, '')
+        .replace(/\u00A0/g, ' ')
+        .replace(/\*/g, '')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    }
+
+    function linhaEmCaixaAltaContexto(linha) {
+      const texto =
+        limparLinhaContexto(linha);
+
+      if (!texto) {
+        return false;
+      }
+
+      const letras =
+        texto.replace(
+          /[^A-Za-zÀ-ÖØ-öø-ÿ]/g,
+          ''
+        );
+
+      if (!letras) {
+        return false;
+      }
+
+      return (
+        letras ===
+        letras.toUpperCase()
+      );
+    }
+
+    function ehCabecalhoPublicacaoContexto(linha) {
+      const n =
+        normalizarContexto(linha);
+
+      const padroes = [
+        /^PORTARIA\b/,
+        /^DELIBERACAO\b/,
+        /^RESOLUCAO\b/,
+        /^INSTRUCAO NORMATIVA\b/,
+        /^DECISAO\b/,
+        /^DESPACHO\b/,
+        /^EXTRATO\b/,
+        /^EXTRATOS\b/,
+        /^EDITAL\b/,
+        /^EDITAIS\b/,
+        /^AVISO\b/,
+        /^AVISOS\b/,
+        /^COMUNICADO\b/,
+        /^COMUNICADOS\b/,
+        /^RESULTADO DE JULGAMENTO\b/,
+        /^RESULTADOS DE JULGAMENTO\b/,
+        /^RETIFICACAO\b/,
+        /^SUMULA\b/
+      ];
+
+      return padroes.some(
+        regex => regex.test(n)
+      );
+    }
+
+    function ehLinhaInstitucionalContexto(linha) {
+      const original =
+        limparLinhaContexto(linha);
+
+      if (!original) {
+        return false;
+      }
+
+      if (
+        original.length > 200
+      ) {
+        return false;
+      }
+
+      const n =
+        normalizarContexto(original);
+
+      if (
+        /^MINISTERIO (DOS|DAS|DO|DA|DE)\b/.test(n)
+      ) {
+        return true;
+      }
+
+      if (
+        !linhaEmCaixaAltaContexto(original)
+      ) {
+        return false;
+      }
+
+      const padroes = [
+        /^PRESIDENCIA DA REPUBLICA\b/,
+        /^VICE-PRESIDENCIA DA REPUBLICA\b/,
+        /^AGENCIA NACIONAL\b/,
+        /^DEPARTAMENTO NACIONAL\b/,
+        /^DIRETORIA COLEGIADA\b/,
+        /^DIRETORIA\b/,
+        /^SUPERINTENDENCIA\b/,
+        /^SECRETARIA\b/,
+        /^GERENCIA\b/,
+        /^COORDENACAO\b/,
+        /^INSTITUTO NACIONAL\b/,
+        /^FUNDACAO NACIONAL\b/,
+        /^EMPRESA BRASILEIRA\b/,
+        /^BANCO CENTRAL DO BRASIL\b/,
+        /^ADVOCACIA-GERAL DA UNIAO\b/,
+        /^CONTROLADORIA-GERAL DA UNIAO\b/,
+        /^DEFENSORIA PUBLICA DA UNIAO\b/,
+        /^CONSELHO NACIONAL\b/,
+        /^AUTORIDADE NACIONAL\b/,
+        /^TRIBUNAL\b/,
+        /^POLICIA RODOVIARIA FEDERAL\b/,
+        /^POLICIA FEDERAL\b/,
+        /^EMBRAPA\b/,
+        /^DATAPREV\b/,
+        /^SERPRO\b/,
+        /^EBSERH\b/,
+        /^INCRA\b/,
+        /^IBAMA\b/,
+        /^ICMBIO\b/,
+        /^ANVISA\b/,
+        /^ANATEL\b/,
+        /^ANEEL\b/,
+        /^ANAC\b/,
+        /^ANTAQ\b/,
+        /^ANTT\b/,
+        /^DNIT\b/,
+        /^PREFEITURA MUNICIPAL\b/,
+        /^GOVERNO DO ESTADO\b/,
+        /^GOVERNO DO DISTRITO FEDERAL\b/
+      ];
+
+      return padroes.some(
+        regex => regex.test(n)
+      );
+    }
+
+    function linhaEhANTTContexto(linha) {
+      const n =
+        normalizarContexto(linha);
+
+      return (
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(n) ||
+        n === 'ANTT'
+      );
+    }
+
+    function encontrarContextoCorrigido(
+      texto,
+      posicaoInicio
+    ) {
+      if (
+        !texto ||
+        !Number.isFinite(posicaoInicio)
+      ) {
+        return {
+          contexto: '',
+          contextoANTT: false
+        };
+      }
+
+      const inicioBusca =
+        Math.max(
+          0,
+          posicaoInicio - 10000
+        );
+
+      const trecho =
+        texto.substring(
+          inicioBusca,
+          posicaoInicio
+        );
+
+      const linhas =
+        trecho
+          .split('\n')
+          .map(
+            limparLinhaContexto
+          );
+
+      const contextoInvertido = [];
+
+      let encontrouInstitucional =
+        false;
+
+      for (
+        let i = linhas.length - 1;
+        i >= 0;
+        i--
+      ) {
+        const linha =
+          linhas[i];
+
+        if (!linha) {
+          continue;
+        }
+
+        if (
+          ehCabecalhoPublicacaoContexto(
+            linha
+          )
+        ) {
+          if (
+            encontrouInstitucional
+          ) {
+            break;
+          }
+
+          continue;
+        }
+
+        if (
+          !ehLinhaInstitucionalContexto(
+            linha
+          )
+        ) {
+          continue;
+        }
+
+        encontrouInstitucional =
+          true;
+
+        contextoInvertido.push(
+          linha
+        );
+
+        if (
+          linhaEhANTTContexto(
+            linha
+          )
+        ) {
+          for (
+            let j = i - 1;
+            j >= Math.max(
+              0,
+              i - 20
+            );
+            j--
+          ) {
+            const anterior =
+              linhas[j];
+
+            if (!anterior) {
+              continue;
+            }
+
+            const nAnterior =
+              normalizarContexto(
+                anterior
+              );
+
+            if (
+              /^MINISTERIO DOS TRANSPORTES\b/.test(
+                nAnterior
+              )
+            ) {
+              contextoInvertido.push(
+                anterior
+              );
+
+              break;
+            }
+
+            if (
+              ehLinhaInstitucionalContexto(
+                anterior
+              ) &&
+              !/^DIRETORIA\b/.test(
+                nAnterior
+              ) &&
+              !/^SUPERINTENDENCIA\b/.test(
+                nAnterior
+              ) &&
+              !/^GERENCIA\b/.test(
+                nAnterior
+              ) &&
+              !/^COORDENACAO\b/.test(
+                nAnterior
+              )
+            ) {
+              break;
+            }
+          }
+
+          break;
+        }
+
+        const n =
+          normalizarContexto(
+            linha
+          );
+
+        const ehOrgaoPrincipal = (
+          /^MINISTERIO\b/.test(n) ||
+          /^AGENCIA NACIONAL\b/.test(n) ||
+          /^DEPARTAMENTO NACIONAL\b/.test(n) ||
+          /^POLICIA RODOVIARIA FEDERAL\b/.test(n) ||
+          /^POLICIA FEDERAL\b/.test(n) ||
+          /^INSTITUTO NACIONAL\b/.test(n) ||
+          /^FUNDACAO NACIONAL\b/.test(n) ||
+          /^EMPRESA BRASILEIRA\b/.test(n) ||
+          /^BANCO CENTRAL DO BRASIL\b/.test(n) ||
+          /^ADVOCACIA-GERAL DA UNIAO\b/.test(n) ||
+          /^CONTROLADORIA-GERAL DA UNIAO\b/.test(n) ||
+          /^DEFENSORIA PUBLICA DA UNIAO\b/.test(n) ||
+          /^PREFEITURA MUNICIPAL\b/.test(n) ||
+          /^GOVERNO DO ESTADO\b/.test(n) ||
+          /^GOVERNO DO DISTRITO FEDERAL\b/.test(n) ||
+          /^EMBRAPA\b/.test(n) ||
+          /^DATAPREV\b/.test(n) ||
+          /^SERPRO\b/.test(n) ||
+          /^EBSERH\b/.test(n) ||
+          /^INCRA\b/.test(n) ||
+          /^IBAMA\b/.test(n) ||
+          /^ICMBIO\b/.test(n) ||
+          /^ANVISA\b/.test(n) ||
+          /^ANATEL\b/.test(n) ||
+          /^ANEEL\b/.test(n) ||
+          /^ANAC\b/.test(n) ||
+          /^ANTAQ\b/.test(n) ||
+          /^DNIT\b/.test(n)
+        );
+
+        if (
+          ehOrgaoPrincipal
+        ) {
+          break;
+        }
+
+        if (
+          contextoInvertido.length >= 5
+        ) {
+          break;
+        }
+      }
+
+      const contextoLinhas =
+        contextoInvertido.reverse();
+
+      const contextoSemDuplicados = [];
+
+      for (
+        const linha of contextoLinhas
+      ) {
+        if (
+          !contextoSemDuplicados.some(
+            existente =>
+              normalizarContexto(
+                existente
+              ) ===
+              normalizarContexto(
+                linha
+              )
+          )
+        ) {
+          contextoSemDuplicados.push(
+            linha
+          );
+        }
+      }
+
+      const contexto =
+        contextoSemDuplicados
+          .join('\n')
+          .trim();
+
+      const contextoANTT =
+        contextoSemDuplicados.some(
+          linha =>
+            linhaEhANTTContexto(
+              linha
+            )
+        );
+
+      return {
+        contexto,
+        contextoANTT
+      };
+    }
+
+    function corrigirContextos(
+      lista,
+      textoSecao
+    ) {
+      const saida = [];
+
+      for (
+        const item of lista
+      ) {
+        const posicaoInicio =
+          Number(
+            item.posicao_inicio ??
+            item.posicao ??
+            0
+          );
+
+        const resultado =
+          encontrarContextoCorrigido(
+            textoSecao,
+            posicaoInicio
+          );
+
+        let contextoFinal =
+          resultado.contexto;
+
+        let contextoANTTFinal =
+          resultado.contextoANTT;
+
+        if (
+          item.classificacao ===
+          'ANTT_DIRETO'
+        ) {
+          contextoANTTFinal =
+            true;
+
+          if (
+            !contextoFinal ||
+            !/AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES/i.test(
+              contextoFinal
+            )
+          ) {
+            contextoFinal =
+              'AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES';
+          }
+        }
+
+        saida.push({
+          ...item,
+          contexto_orgao_original:
+            item.contexto_orgao || '',
+          contexto_orgao_corrigido:
+            contextoFinal,
+          contexto_orgao:
+            contextoFinal,
+          contexto_antt:
+            contextoANTTFinal
+        });
+      }
+
+      return saida;
+    }
+
+    function mostrarResultadoContexto() {
+      const c1 =
+        window.contextosCorrigidosDOU[1];
+
+      const c2 =
+        window.contextosCorrigidosDOU[2];
+
+      const c3 =
+        window.contextosCorrigidosDOU[3];
+
+      const todos = [
+        ...c1,
+        ...c2,
+        ...c3
+      ];
+
+      const externos =
+        todos.filter(
+          item =>
+            item.classificacao ===
+            'OUTRO_ORGAO_CITA_ANTT'
+        );
+
+      function listarExternos(lista) {
+        return lista
+          .map(
+            item => `
+              <div style="padding:10px 0;border-bottom:1px solid #e5e7eb;">
+                <strong>
+                  Seção ${escaparHTML(item.secao)}
+                  | índice ${item.indice}
+                </strong>
+                <br>
+                ${escaparHTML(item.cabecalho)}
+                <br>
+                <small>
+                  Contexto corrigido:
+                  ${escaparHTML(
+                    item.contexto_orgao ||
+                    '(sem contexto identificado)'
+                  )}
+                </small>
+                <br>
+                <small>
+                  contexto_antt:
+                  ${item.contexto_antt ? 'true' : 'false'}
+                </small>
+              </div>
+            `
+          )
+          .join('');
+      }
+
+      document.getElementById(
+        'resultadoContexto'
+      ).innerHTML = `
+        <div class="candidatos-card">
+
+          <h3>
+            ✅ Contexto institucional corrigido
+          </h3>
+
+          <p>
+            <strong>Seção 1:</strong>
+            ${c1.length}
+          </p>
+
+          <p>
+            <strong>Seção 2:</strong>
+            ${c2.length}
+          </p>
+
+          <p>
+            <strong>Seção 3:</strong>
+            ${c3.length}
+          </p>
+
+          <p>
+            <strong>Total:</strong>
+            ${todos.length}
+          </p>
+
+          <hr>
+
+          <strong>
+            Publicações de outros órgãos que citam a ANTT
+          </strong>
+
+          ${listarExternos(externos)}
+
+          <br>
+
+          <strong>
+            Migração principal concluída.
+          </strong>
+
+          <br>
+          Próxima etapa:
+          preparar os dados finais para Google Sheets e para o boletim.
+        </div>
+      `;
+    }
+
     async function processarDOU() {
       if (!validarArquivos()) return;
 
@@ -2023,6 +2589,7 @@
       window.candidatosDOU = { 1: [], 2: [], 3: [] };
     window.publicacoesDOU = { 1: [], 2: [], 3: [] };
       window.relevantesDOU = { 1: [], 2: [], 3: [] };
+      window.contextosCorrigidosDOU = { 1: [], 2: [], 3: [] };
 
       try {
         await extrairPDF(pdfSecao1.files[0], 1);
@@ -2155,6 +2722,59 @@
           );
 
         mostrarResultadoRelevancia();
+
+        document.getElementById(
+          'resultadoContexto'
+        ).innerHTML = `
+          <div class="candidatos-card">
+            <h3>Corrigindo contexto institucional...</h3>
+            Aguarde.
+          </div>
+        `;
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              50
+            )
+        );
+
+        window.contextosCorrigidosDOU[1] =
+          corrigirContextos(
+            window.relevantesDOU[1],
+            window.textosDOU[1]
+          );
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              0
+            )
+        );
+
+        window.contextosCorrigidosDOU[2] =
+          corrigirContextos(
+            window.relevantesDOU[2],
+            window.textosDOU[2]
+          );
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              0
+            )
+        );
+
+        window.contextosCorrigidosDOU[3] =
+          corrigirContextos(
+            window.relevantesDOU[3],
+            window.textosDOU[3]
+          );
+
+        mostrarResultadoContexto();
 
       } catch (erro) {
         console.error(erro);
