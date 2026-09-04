@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Boletim DOU - ANTT</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      color: #1f2937;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 30px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+
+    .subtitulo {
+      margin-top: 0;
+      margin-bottom: 30px;
+      color: #6b7280;
+    }
+
+    .campo {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    input[type="date"],
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: white;
+    }
+
+    .secao {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .secao h2 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 9px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    #resultado {
+      display: none;
+      margin-top: 25px;
+      padding: 18px;
+      border-radius: 10px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+    }
+
+    .arquivo-selecionado {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+
+    .erro {
+      background: #fef2f2 !important;
+      border-color: #fecaca !important;
+      color: #991b1b;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <div class="card">
+
+      <h1>Boletim DOU - ANTT</h1>
+
+      <p class="subtitulo">
+        Selecione os PDFs das Seções 1, 2 e 3 do Diário Oficial da União.
+      </p>
+
+      <div class="campo">
+        <label for="dataDou">
+          Data do DOU
+        </label>
+
+        <input
+          type="date"
+          id="dataDou"
+        >
+      </div>
+
+      <div class="secao">
+
+        <h2>Seção 1</h2>
+
+        <input
+          type="file"
+          id="pdfSecao1"
+          accept="application/pdf,.pdf"
+        >
+
+        <div
+          class="arquivo-selecionado"
+          id="nomeSecao1"
+        ></div>
+
+      </div>
+
+      <div class="secao">
+
+        <h2>Seção 2</h2>
+
+        <input
+          type="file"
+          id="pdfSecao2"
+          accept="application/pdf,.pdf"
+        >
+
+        <div
+          class="arquivo-selecionado"
+          id="nomeSecao2"
+        ></div>
+
+      </div>
+
+      <div class="secao">
+
+        <h2>Seção 3</h2>
+
+        <input
+          type="file"
+          id="pdfSecao3"
+          accept="application/pdf,.pdf"
+        >
+
+        <div
+          class="arquivo-selecionado"
+          id="nomeSecao3"
+        ></div>
+
+      </div>
+
+      <button id="btnProcessar">
+        PROCESSAR DOU
+      </button>
+
+      <div id="resultado"></div>
+
+    </div>
+
+  </div>
+
+  <script>
+
+    const dataDou =
+      document.getElementById('dataDou');
+
+    const pdfSecao1 =
+      document.getElementById('pdfSecao1');
+
+    const pdfSecao2 =
+      document.getElementById('pdfSecao2');
+
+    const pdfSecao3 =
+      document.getElementById('pdfSecao3');
+
+    const nomeSecao1 =
+      document.getElementById('nomeSecao1');
+
+    const nomeSecao2 =
+      document.getElementById('nomeSecao2');
+
+    const nomeSecao3 =
+      document.getElementById('nomeSecao3');
+
+    const btnProcessar =
+      document.getElementById('btnProcessar');
+
+    const resultado =
+      document.getElementById('resultado');
+
+
+    pdfSecao1.addEventListener(
+      'change',
+      function () {
+
+        nomeSecao1.textContent =
+          pdfSecao1.files[0]
+            ? `Arquivo selecionado: ${pdfSecao1.files[0].name}`
+            : '';
+
+      }
+    );
+
+
+    pdfSecao2.addEventListener(
+      'change',
+      function () {
+
+        nomeSecao2.textContent =
+          pdfSecao2.files[0]
+            ? `Arquivo selecionado: ${pdfSecao2.files[0].name}`
+            : '';
+
+      }
+    );
+
+
+    pdfSecao3.addEventListener(
+      'change',
+      function () {
+
+        nomeSecao3.textContent =
+          pdfSecao3.files[0]
+            ? `Arquivo selecionado: ${pdfSecao3.files[0].name}`
+            : '';
+
+      }
+    );
+
+
+    btnProcessar.addEventListener(
+      'click',
+      function () {
+
+        resultado.classList.remove('erro');
+
+        if (!dataDou.value) {
+
+          resultado.style.display =
+            'block';
+
+          resultado.classList.add(
+            'erro'
+          );
+
+          resultado.innerHTML =
+            'Informe a data do DOU.';
+
+          return;
+
+        }
+
+
+        if (!pdfSecao1.files[0]) {
+
+          resultado.style.display =
+            'block';
+
+          resultado.classList.add(
+            'erro'
+          );
+
+          resultado.innerHTML =
+            'Selecione o PDF da Seção 1.';
+
+          return;
+
+        }
+
+
+        if (!pdfSecao2.files[0]) {
+
+          resultado.style.display =
+            'block';
+
+          resultado.classList.add(
+            'erro'
+          );
+
+          resultado.innerHTML =
+            'Selecione o PDF da Seção 2.';
+
+          return;
+
+        }
+
+
+        if (!pdfSecao3.files[0]) {
+
+          resultado.style.display =
+            'block';
+
+          resultado.classList.add(
+            'erro'
+          );
+
+          resultado.innerHTML =
+            'Selecione o PDF da Seção 3.';
+
+          return;
+
+        }
+
+
+        resultado.style.display =
+          'block';
+
+        resultado.innerHTML = `
+          <strong>Arquivos recebidos com sucesso.</strong>
+          <br><br>
+          Data: ${dataDou.value}
+          <br>
+          Seção 1: ${pdfSecao1.files[0].name}
+          <br>
+          Seção 2: ${pdfSecao2.files[0].name}
+          <br>
+          Seção 3: ${pdfSecao3.files[0].name}
+          <br><br>
+          Próxima etapa: extrair o texto dos PDFs.
+        `;
+
+      }
+    );
+
+  </script>
+
+</body>
+
+</html>
