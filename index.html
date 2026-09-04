@@ -140,6 +140,133 @@
     }
 
     .amostra div:last-child { border-bottom: 0; }
+  
+    .boletim-preview {
+      background: #ffffff;
+      border: 1px solid #c9c9c9;
+      margin-top: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111111;
+    }
+
+    .boletim-banner {
+      background: linear-gradient(90deg, #0f4f88, #0c6b74, #6a8f3a);
+      color: #ffffff;
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .boletim-banner .antt {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .boletim-banner .dou-legis {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: right;
+      line-height: 1.25;
+    }
+
+    .boletim-topo {
+      text-align: center;
+      padding: 22px 20px 12px;
+      line-height: 1.9;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .boletim-faixa {
+      background: #233f73;
+      color: #ffffff;
+      text-align: center;
+      padding: 18px 16px;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    .boletim-conteudo {
+      padding: 34px 24px 42px;
+    }
+
+    .boletim-secao {
+      margin-top: 10px;
+      margin-bottom: 44px;
+    }
+
+    .boletim-secao-titulo {
+      text-align: center;
+      text-decoration: underline;
+      font-weight: 700;
+      margin-bottom: 26px;
+    }
+
+    .boletim-orgao-principal {
+      text-align: center;
+      font-weight: 700;
+      color: #163a68;
+      margin-bottom: 22px;
+    }
+
+    .boletim-unidade {
+      text-align: center;
+      color: #163a68;
+      margin: 8px 0 26px;
+      font-size: 14px;
+    }
+
+    .boletim-publicacao {
+      margin-bottom: 34px;
+      page-break-inside: avoid;
+    }
+
+    .boletim-publicacao-titulo {
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .boletim-publicacao-corpo {
+      white-space: pre-wrap;
+      line-height: 1.55;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .boletim-orgao-externo {
+      text-align: center;
+      font-weight: 700;
+      color: #163a68;
+      margin: 20px 0 18px;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+
+      #previaBoletim,
+      #previaBoletim * {
+        visibility: visible !important;
+      }
+
+      #previaBoletim {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+
+      .boletim-preview {
+        border: 0;
+      }
+    }
+
   </style>
 </head>
 
@@ -252,7 +379,62 @@
         <div id="resultadoPublicacoes"></div>
         <div id="resultadoRelevancia"></div>
         <div id="resultadoContexto"></div>
-        <div class="candidatos-card" id="blocoGoogleSheets">
+        
+        <div class="candidatos-card" id="blocoBoletim">
+          <h3>Prévia do Boletim DOU</h3>
+
+          <p>
+            Gere a prévia com as publicações relevantes já processadas.
+          </p>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0;">
+            <div style="flex:1;min-width:220px;">
+              <label for="numeroDouBoletim"><strong>Nº do DOU</strong></label>
+              <input
+                id="numeroDouBoletim"
+                type="text"
+                placeholder="Ex.: 168"
+                style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;"
+              >
+            </div>
+
+            <div style="flex:1;min-width:220px;">
+              <label for="dataDouBoletim"><strong>Data do DOU</strong></label>
+              <input
+                id="dataDouBoletim"
+                type="date"
+                style="width:100%;padding:10px;margin-top:6px;box-sizing:border-box;"
+              >
+            </div>
+          </div>
+
+          <button
+            id="btnGerarBoletim"
+            type="button"
+            onclick="gerarPreviaBoletim()"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;margin-right:8px;"
+          >
+            GERAR BOLETIM
+          </button>
+
+          <button
+            id="btnImprimirBoletim"
+            type="button"
+            onclick="imprimirBoletim()"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;"
+          >
+            IMPRIMIR / SALVAR EM PDF
+          </button>
+
+          <div id="statusBoletim" style="margin-top:12px;"></div>
+
+          <div
+            id="previaBoletim"
+            style="margin-top:18px;"
+          ></div>
+        </div>
+
+<div class="candidatos-card" id="blocoGoogleSheets">
           <h3>Google Sheets</h3>
 
           <p>
@@ -2838,6 +3020,407 @@
       } finally {
         botao.disabled = false;
       }
+    }
+
+
+
+    function obterPublicacoesParaBoletim() {
+      const fonte =
+        window.contextosCorrigidosDOU &&
+        (
+          window.contextosCorrigidosDOU[1]?.length ||
+          window.contextosCorrigidosDOU[2]?.length ||
+          window.contextosCorrigidosDOU[3]?.length
+        )
+          ? window.contextosCorrigidosDOU
+          : window.relevantesDOU;
+
+      return {
+        1: [...(fonte?.[1] || [])],
+        2: [...(fonte?.[2] || [])],
+        3: [...(fonte?.[3] || [])]
+      };
+    }
+
+    function escaparHTMLBoletim(texto) {
+      return String(texto || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function normalizarLinhaUnidade(texto) {
+      return String(texto || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function detectarUnidadeANTT(item) {
+      const conteudo = String(
+        item.conteudo ||
+        `${item.cabecalho || ''}\n${item.corpo || ''}`
+      );
+
+      const n = normalizarRelevancia(conteudo);
+
+      const mapa = [
+        {
+          regex: /DIRETORIA COLEGIADA/,
+          nome: 'DIRETORIA COLEGIADA'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE INFRAESTRUTURA RODOVIARIA/,
+          nome: 'SUPERINTENDÊNCIA DE INFRAESTRUTURA RODOVIÁRIA'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO DE PASSAGEIROS/,
+          nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO DE PASSAGEIROS'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO/,
+          nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS/,
+          nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO E MULTIMODAL DE CARGAS'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA/,
+          nome: 'SUPERINTENDÊNCIA DE GESTÃO ADMINISTRATIVA'
+        },
+        {
+          regex: /COMISSOES DE OUTORGA/,
+          nome: 'COMISSÕES DE OUTORGA'
+        },
+        {
+          regex: /COMISSAO DE OUTORGA/,
+          nome: 'COMISSÕES DE OUTORGA'
+        }
+      ];
+
+      for (const entrada of mapa) {
+        if (entrada.regex.test(n)) {
+          return entrada.nome;
+        }
+      }
+
+      const contexto = normalizarLinhaUnidade(
+        item.contexto_orgao || ''
+      );
+
+      if (
+        contexto &&
+        !/AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES/i.test(contexto) &&
+        item.classificacao === 'ANTT_DIRETO'
+      ) {
+        return contexto;
+      }
+
+      return '';
+    }
+
+    function detectarOrgaoExterno(item) {
+      if (
+        item.classificacao !==
+        'OUTRO_ORGAO_CITA_ANTT'
+      ) {
+        return '';
+      }
+
+      const contexto =
+        normalizarLinhaUnidade(
+          item.contexto_orgao || ''
+        );
+
+      return contexto;
+    }
+
+    function formatarDataExtenso(dataIso) {
+      if (!dataIso) {
+        return '';
+      }
+
+      const partes =
+        String(dataIso).split('-');
+
+      if (partes.length !== 3) {
+        return dataIso;
+      }
+
+      const data =
+        new Date(
+          Number(partes[0]),
+          Number(partes[1]) - 1,
+          Number(partes[2])
+        );
+
+      const dias = [
+        'DOMINGO',
+        'SEGUNDA-FEIRA',
+        'TERÇA-FEIRA',
+        'QUARTA-FEIRA',
+        'QUINTA-FEIRA',
+        'SEXTA-FEIRA',
+        'SÁBADO'
+      ];
+
+      const meses = [
+        'JANEIRO',
+        'FEVEREIRO',
+        'MARÇO',
+        'ABRIL',
+        'MAIO',
+        'JUNHO',
+        'JULHO',
+        'AGOSTO',
+        'SETEMBRO',
+        'OUTUBRO',
+        'NOVEMBRO',
+        'DEZEMBRO'
+      ];
+
+      return {
+        diaSemana:
+          dias[data.getDay()],
+        dataExtenso:
+          `${String(data.getDate()).padStart(2, '0')} DE ${meses[data.getMonth()]} DE ${data.getFullYear()}`
+      };
+    }
+
+    function montarSecaoBoletim(secao, itens) {
+      if (!itens.length) {
+        return '';
+      }
+
+      let htmlSecao = `
+        <section class="boletim-secao">
+          <div class="boletim-secao-titulo">
+            SEÇÃO ${secao}
+          </div>
+
+          <div class="boletim-orgao-principal">
+            AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
+          </div>
+      `;
+
+      let unidadeAtual = null;
+      let orgaoExternoAtual = null;
+
+      for (const item of itens) {
+        const unidade =
+          detectarUnidadeANTT(item);
+
+        const orgaoExterno =
+          detectarOrgaoExterno(item);
+
+        if (orgaoExterno) {
+          if (orgaoExterno !== orgaoExternoAtual) {
+            htmlSecao += `
+              <div class="boletim-orgao-externo">
+                ${escaparHTMLBoletim(orgaoExterno)}
+              </div>
+            `;
+
+            orgaoExternoAtual =
+              orgaoExterno;
+
+            unidadeAtual =
+              null;
+          }
+        } else {
+          orgaoExternoAtual = null;
+
+          if (
+            unidade &&
+            unidade !== unidadeAtual
+          ) {
+            htmlSecao += `
+              <div class="boletim-unidade">
+                ${escaparHTMLBoletim(unidade)}
+              </div>
+            `;
+
+            unidadeAtual =
+              unidade;
+          }
+        }
+
+        const titulo =
+          String(
+            item.cabecalho ||
+            item.cabecalho_detectado ||
+            ''
+          ).trim();
+
+        const corpo =
+          String(
+            item.corpo ||
+            item.conteudo ||
+            ''
+          ).trim();
+
+        htmlSecao += `
+          <article class="boletim-publicacao">
+            <div class="boletim-publicacao-titulo">
+              ${escaparHTMLBoletim(titulo)}
+            </div>
+
+            <div class="boletim-publicacao-corpo">
+              ${escaparHTMLBoletim(corpo)}
+            </div>
+          </article>
+        `;
+      }
+
+      htmlSecao += '</section>';
+
+      return htmlSecao;
+    }
+
+    function gerarPreviaBoletim() {
+      const status =
+        document.getElementById(
+          'statusBoletim'
+        );
+
+      const previa =
+        document.getElementById(
+          'previaBoletim'
+        );
+
+      const numero =
+        String(
+          document.getElementById(
+            'numeroDouBoletim'
+          )?.value || ''
+        ).trim();
+
+      const dataIso =
+        String(
+          document.getElementById(
+            'dataDouBoletim'
+          )?.value || ''
+        ).trim();
+
+      const publicacoes =
+        obterPublicacoesParaBoletim();
+
+      const total =
+        publicacoes[1].length +
+        publicacoes[2].length +
+        publicacoes[3].length;
+
+      if (total === 0) {
+        status.innerHTML =
+          '<strong>Processe os PDFs antes de gerar o boletim.</strong>';
+
+        return;
+      }
+
+      if (!numero) {
+        status.innerHTML =
+          '<strong>Informe o número do DOU.</strong>';
+
+        return;
+      }
+
+      if (!dataIso) {
+        status.innerHTML =
+          '<strong>Informe a data do DOU.</strong>';
+
+        return;
+      }
+
+      const dataInfo =
+        formatarDataExtenso(
+          dataIso
+        );
+
+      const tituloFaixa =
+        `DIÁRIO OFICIAL DA UNIÃO – DOU Nº ${escaparHTMLBoletim(numero)}, ${dataInfo.diaSemana}, ${dataInfo.dataExtenso}`;
+
+      previa.innerHTML = `
+        <div class="boletim-preview">
+
+          <div class="boletim-banner">
+            <div class="antt">
+              ANTT
+              <div style="font-size:13px;font-weight:600;margin-top:4px;">
+                AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES
+              </div>
+            </div>
+
+            <div class="dou-legis">
+              DIÁRIO OFICIAL DA UNIÃO e ANTTLegis
+              <div style="font-size:16px;font-weight:500;margin-top:4px;">
+                Publicações Oficiais
+              </div>
+            </div>
+          </div>
+
+          <div class="boletim-topo">
+            <div>SECRETARIA-GERAL (SEGER)</div>
+            <div>GABINETE DO DIRETOR-GERAL (GAB-DG)</div>
+          </div>
+
+          <div class="boletim-faixa">
+            ${tituloFaixa}
+          </div>
+
+          <div class="boletim-conteudo">
+            ${montarSecaoBoletim(1, publicacoes[1])}
+            ${montarSecaoBoletim(2, publicacoes[2])}
+            ${montarSecaoBoletim(3, publicacoes[3])}
+          </div>
+
+        </div>
+      `;
+
+      status.innerHTML = `
+        <strong>Prévia gerada.</strong>
+        <br>
+        ${total} publicações incluídas no boletim.
+      `;
+
+      document.getElementById(
+        'numeroDOU'
+      )?.setAttribute(
+        'value',
+        numero
+      );
+
+      document.getElementById(
+        'dataDOU'
+      )?.setAttribute(
+        'value',
+        dataIso
+      );
+    }
+
+    function imprimirBoletim() {
+      const previa =
+        document.getElementById(
+          'previaBoletim'
+        );
+
+      if (
+        !previa ||
+        !previa.innerHTML.trim()
+      ) {
+        const status =
+          document.getElementById(
+            'statusBoletim'
+          );
+
+        status.innerHTML =
+          '<strong>Gere a prévia antes de imprimir.</strong>';
+
+        return;
+      }
+
+      window.print();
     }
 
 
