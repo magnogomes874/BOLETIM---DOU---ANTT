@@ -1849,6 +1849,35 @@
       const titulo =
         normalizarRelevancia(cabecalho);
 
+      /*
+        Proteção explícita contra atos de outros órgãos.
+        Siglas ministeriais no próprio título prevalecem sobre qualquer
+        contexto encontrado para trás.
+      */
+      const siglasExternasTitulo = [
+        /\/MTUR\b/,
+        /\/MTE\b/,
+        /\/MEC\b/,
+        /\/MF\b/,
+        /\/MJSP\b/,
+        /\/MS\b/,
+        /\/MAPA\b/,
+        /\/MMA\b/,
+        /\/MDIC\b/,
+        /\/MGI\b/,
+        /\/MPO\b/,
+        /\/MPS\b/,
+        /\/MME\b/
+      ];
+
+      if (
+        siglasExternasTitulo.some(
+          regex => regex.test(titulo)
+        )
+      ) {
+        return false;
+      }
+
       const texto =
         normalizarRelevancia(
           `${cabecalho}\n${corpo}\n${conteudo}`
@@ -2065,6 +2094,8 @@
         'SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS',
         'SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO',
         'SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA',
+        'SUPERINTENDENCIA DE GOVERNANCA REGULATORIA',
+        'SUPERINTENDENCIA DE GOVERNANCA ESTRATEGICA E REGULATORIA',
         'GERENCIA DE LICITACOES E CONTRATOS',
         'COMISSOES DE OUTORGA',
         'COMISSAO DE OUTORGA'
@@ -2115,7 +2146,15 @@
           /^INSTITUTO NACIONAL\b/.test(linha) ||
           /^FUNDACAO\b/.test(linha) ||
           /^CONSELHO\b/.test(linha) ||
-          /^MINISTERIO DOS TRANSPORTES$/.test(linha)
+          /*
+            Qualquer outro Ministério encerra o bloco ANTT.
+            "Ministério dos Transportes" é o órgão superior da ANTT
+            e, portanto, não é tratado como fronteira externa.
+          */
+          (
+            /^MINISTERIO\b/.test(linha) &&
+            linha !== 'MINISTERIO DOS TRANSPORTES'
+          )
         );
       };
 
@@ -2165,20 +2204,6 @@
           return false;
         }
 
-        /*
-          Depois de uma unidade da ANTT, se surgir outro cabeçalho
-          institucional em caixa alta antes de chegar à Agência,
-          interrompemos para evitar vazamento de contexto.
-        */
-        if (
-          encontrouUnidadeANTT &&
-          linha.length >= 8 &&
-          linha.length <= 120 &&
-          /^[A-Z0-9ÁÀÂÃÉÊÍÓÔÕÚÜÇ\s\-–—/]+$/.test(linha) &&
-          !unidadesANTT.includes(linha)
-        ) {
-          return false;
-        }
       }
 
       return false;
@@ -3468,6 +3493,10 @@
           nome: 'SUPERINTENDÊNCIA DE GESTÃO ADMINISTRATIVA'
         },
         {
+          regex: /SUPERINTENDENCIA DE GOVERNANCA REGULATORIA|SUPERINTENDENCIA DE GOVERNANCA ESTRATEGICA E REGULATORIA/,
+          nome: 'SUPERINTENDÊNCIA DE GOVERNANÇA REGULATÓRIA'
+        },
+        {
           regex: /DIRETORIA COLEGIADA/,
           nome: 'DIRETORIA COLEGIADA'
         },
@@ -3519,6 +3548,8 @@
           /^SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS$/.test(n) ||
           /^SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO$/.test(n) ||
           /^SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA$/.test(n) ||
+          /^SUPERINTENDENCIA DE GOVERNANCA REGULATORIA$/.test(n) ||
+          /^SUPERINTENDENCIA DE GOVERNANCA ESTRATEGICA E REGULATORIA$/.test(n) ||
           /^DIRETORIA COLEGIADA$/.test(n) ||
           /^COMISSOES? DE OUTORGA$/.test(n)
         ) {
@@ -3684,10 +3715,15 @@
     function linhaEhTabelaDOU(linha) {
       const l = String(linha || '').trim();
 
-      return (
-        /^\.\s*\.\s*(?:Item|\d+)\b/i.test(l) ||
-        /^\.\s*\.(?:Item|\d+)\b/i.test(l)
-      );
+      /*
+        No texto extraído do DOU, tabelas são marcadas de várias formas:
+        ". .Item ...", ". .1 ...", ". .EMPREGADOR ...",
+        ". .Razão Social ..." etc.
+
+        A versão anterior só reconhecia Item/número e por isso algumas
+        tabelas eram exibidas como texto corrido.
+      */
+      return /^\.\s*\./.test(l);
     }
 
     function separarCelulasTabelaDOU(linha) {
@@ -3851,9 +3887,9 @@
 
         if (emTabela) {
           /*
-            Continuação de célula: enquanto não chegarmos em Observações,
-            artigo seguinte ou outro bloco jurídico, mantemos o conteúdo
-            junto da última linha da tabela.
+            Continuação de tabela. O DOU pode quebrar uma tabela por
+            várias páginas; por isso ignoramos cabeçalhos/rodapés da
+            própria página, mas mantemos o conteúdo da célula.
           */
           if (
             /^Observações\s*:/i.test(linha) ||
@@ -3862,6 +3898,16 @@
           ) {
             fecharTabela();
             textoAtual.push(linha);
+            continue;
+          }
+
+          if (
+            /^Seção\s+[123]\b/i.test(linha) ||
+            /^Documento assinado digitalmente/i.test(linha) ||
+            /^Este documento pode ser verificado/i.test(linha) ||
+            /^PRESIDÊNCIA DA REPÚBLICA/i.test(linha) ||
+            /^ISSN\b/i.test(linha)
+          ) {
             continue;
           }
 
