@@ -1913,6 +1913,22 @@
       if (
         String(secao) === '3'
       ) {
+        /*
+          Publicações genéricas como AVISO, RETIFICAÇÃO e EXTRATO
+          são consideradas da ANTT quando o bloco institucional do
+          PDF mostra que estão sob a Agência ou uma de suas unidades.
+        */
+        if (
+          contextoANTT === true &&
+          (
+            ehTituloSecao3(titulo) ||
+            titulo === 'RETIFICACAO' ||
+            /^REUNIAO PARTICIPATIVA/.test(titulo)
+          )
+        ) {
+          return true;
+        }
+
         if (
           cabecalhoIdentificaANTT(
             titulo
@@ -1959,6 +1975,28 @@
       if (
         String(secao) === '2'
       ) {
+        const padroesSecao2ANTT = [
+          /^PORTARIA DG Nº/,
+          /^PORTARIA SUROD Nº/,
+          /^PORTARIA SUROC Nº/,
+          /^PORTARIA SUPAS Nº/,
+          /^PORTARIA SUFER Nº/,
+          /^PORTARIA SUDEG Nº/,
+          /^PORTARIA SUSPI Nº/,
+          /^PORTARIA DE PESSOAL .*ANTT/,
+          /^RETIFICACAO$/
+        ];
+
+        if (
+          contextoANTT === true &&
+          padroesSecao2ANTT.some(
+            regex =>
+              regex.test(titulo)
+          )
+        ) {
+          return true;
+        }
+
         if (
           mencionaANTT(texto) &&
           (
@@ -1973,6 +2011,149 @@
 
       return false;
     }
+
+    function estaNoBlocoInstitucionalANTT(item) {
+      const secao = String(item.secao || '');
+
+      const textoSecao =
+        String(window.textosDOU?.[secao] || '');
+
+      const posicao = Number(
+        item.posicao_inicio ??
+        item.posicao ??
+        0
+      );
+
+      /*
+        Primeiro usamos o contexto já identificado pelo extrator.
+        Algumas publicações, como RETIFICAÇÃO, podem não repetir
+        "Agência Nacional de Transportes Terrestres" no próprio corpo.
+      */
+      const contextoN =
+        normalizarRelevancia(
+          item.contexto_orgao || ''
+        );
+
+      const unidadesANTT = [
+        'AGENCIA NACIONAL DE TRANSPORTES TERRESTRES',
+        'DIRETORIA COLEGIADA',
+        'DIRETORIA-GERAL',
+        'SUPERINTENDENCIA DE INFRAESTRUTURA RODOVIARIA',
+        'SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO DE PASSAGEIROS',
+        'SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS',
+        'SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO',
+        'SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA',
+        'GERENCIA DE LICITACOES E CONTRATOS',
+        'COMISSOES DE OUTORGA',
+        'COMISSAO DE OUTORGA'
+      ];
+
+      if (
+        unidadesANTT.some(
+          unidade =>
+            contextoN.includes(unidade)
+        )
+      ) {
+        return true;
+      }
+
+      if (
+        !textoSecao ||
+        !Number.isFinite(posicao) ||
+        posicao <= 0
+      ) {
+        return item.contexto_antt === true;
+      }
+
+      /*
+        Percorremos o texto original do PDF PARA TRÁS.
+        A primeira estrutura institucional relevante encontrada
+        define a qual órgão a publicação pertence.
+
+        Isso resolve:
+        - Seção 2: RETIFICAÇÃO da ANTT;
+        - Seção 2: Portarias da ANTT;
+        - Seção 3: AVISO da SUFER;
+        - impede que PRF/MPDFT entrem apenas por citar ANTT.
+      */
+      const inicio =
+        Math.max(0, posicao - 12000);
+
+      const trecho =
+        textoSecao.substring(
+          inicio,
+          posicao
+        );
+
+      const linhas =
+        trecho
+          .split('\n')
+          .map(linha => linha.trim())
+          .filter(Boolean);
+
+      const unidadesNormalizadas =
+        unidadesANTT.map(
+          normalizarRelevancia
+        );
+
+      const limitesExternos = [
+        /^MINISTERIO PUBLICO\b/,
+        /^POLICIA RODOVIARIA FEDERAL$/,
+        /^DEPARTAMENTO NACIONAL\b/,
+        /^DEFENSORIA PUBLICA\b/,
+        /^TRIBUNAL DE CONTAS\b/,
+        /^PODER JUDICIARIO\b/,
+        /^PODER LEGISLATIVO\b/,
+        /^BANCO CENTRAL\b/,
+        /^ADVOCACIA-GERAL DA UNIAO$/,
+        /^CONTROLADORIA-GERAL DA UNIAO$/,
+        /^AGENCIA NACIONAL DE(?! TRANSPORTES TERRESTRES)/,
+        /^MINISTERIO\b/
+      ];
+
+      for (
+        let i = linhas.length - 1;
+        i >= 0;
+        i--
+      ) {
+        const linhaN =
+          normalizarRelevancia(
+            linhas[i]
+          );
+
+        if (!linhaN) {
+          continue;
+        }
+
+        if (
+          unidadesNormalizadas.some(
+            unidade =>
+              linhaN === unidade ||
+              linhaN.includes(unidade)
+          )
+        ) {
+          return true;
+        }
+
+        /*
+          Ministério dos Transportes é o órgão superior da ANTT.
+          Ele não prova sozinho que o ato é da ANTT; por isso,
+          chegando nele sem encontrar a Agência/unidade antes,
+          encerramos como "não ANTT".
+        */
+        if (
+          limitesExternos.some(
+            regex =>
+              regex.test(linhaN)
+          )
+        ) {
+          return false;
+        }
+      }
+
+      return item.contexto_antt === true;
+    }
+
 
     function classificarRelevanciaPublicacoes(
       publicacoes
@@ -2011,7 +2192,10 @@
           );
 
         const contextoANTT =
-          item.contexto_antt === true;
+          item.contexto_antt === true ||
+          estaNoBlocoInstitucionalANTT(
+            item
+          );
 
         const temMencaoANTT =
           mencionaANTT(
@@ -3162,16 +3346,18 @@
           ? window.contextosCorrigidosDOU
           : window.relevantesDOU;
 
-      const somenteDiretos = lista =>
-        [...(lista || [])].filter(
-          item =>
-            item.classificacao === 'ANTT_DIRETO'
-        );
+      /*
+        Não fazemos um segundo filtro por classificação aqui.
+        Isso evita retirar RETIFICAÇÕES, AVISOS e outros atos
+        legítimos que dependem do contexto institucional do PDF.
 
+        Atos externos que apenas citam "Resolução da ANTT" já são
+        eliminados na etapa classificarRelevanciaPublicacoes.
+      */
       return {
-        1: somenteDiretos(fonte?.[1]),
-        2: somenteDiretos(fonte?.[2]),
-        3: somenteDiretos(fonte?.[3])
+        1: [...(fonte?.[1] || [])],
+        2: [...(fonte?.[2] || [])],
+        3: [...(fonte?.[3] || [])]
       };
     }
 
