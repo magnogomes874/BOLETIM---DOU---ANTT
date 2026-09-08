@@ -226,7 +226,7 @@
     }
 
     .boletim-publicacao-titulo {
-      font-weight: 700;
+      font-weight: 400;
       margin-bottom: 16px;
       text-transform: uppercase;
     }
@@ -4145,7 +4145,7 @@
         htmlSecao += `
           <article class="boletim-publicacao">
             <div class="boletim-publicacao-titulo">
-              ${escaparHTMLBoletim(titulo)}
+              ${destacarNomenclaturaAto(titulo)}
             </div>
 
             <div class="boletim-publicacao-corpo">
@@ -4313,6 +4313,68 @@
         : `<strong>${escaparHTMLBoletim(mensagem)}</strong>`;
     }
 
+    function destacarNomenclaturaAto(titulo) {
+      const texto = String(titulo || '').trim();
+
+      const especies = [
+        'INSTRUÇÃO NORMATIVA',
+        'ORDEM DE SERVIÇO',
+        'RESULTADO DE JULGAMENTO',
+        'PORTARIA DE PESSOAL',
+        'PORTARIA CONJUNTA',
+        'PORTARIA',
+        'DELIBERAÇÃO',
+        'RESOLUÇÃO',
+        'DECISÃO',
+        'RETIFICAÇÃO',
+        'DESPACHO',
+        'EDITAL',
+        'AVISO',
+        'COMUNICADO',
+        'EXTRATO',
+        'ATO',
+        'SÚMULA',
+        'REGULAMENTO'
+      ];
+
+      const textoMaiusculo =
+        texto.toLocaleUpperCase('pt-BR');
+
+      for (const especie of especies) {
+        if (
+          textoMaiusculo.startsWith(
+            especie.toLocaleUpperCase('pt-BR')
+          )
+        ) {
+          const inicio =
+            texto.substring(
+              0,
+              especie.length
+            );
+
+          const restante =
+            texto.substring(
+              especie.length
+            );
+
+          return (
+            '<span style="font-weight:700 !important;">' +
+            escaparHTMLBoletim(inicio) +
+            '</span>' +
+            '<span style="font-weight:normal !important;">' +
+            escaparHTMLBoletim(restante) +
+            '</span>'
+          );
+        }
+      }
+
+      return (
+        '<span style="font-weight:normal !important;">' +
+        escaparHTMLBoletim(texto) +
+        '</span>'
+      );
+    }
+
     function formatarCorpoOutlook(texto) {
       const blocos = extrairBlocosTabelaDOU(texto);
 
@@ -4466,7 +4528,7 @@
                   text-transform:uppercase;
                 "
               >
-                ${escaparHTMLBoletim(titulo)}
+                ${destacarNomenclaturaAto(titulo)}
               </div>
 
               <div
