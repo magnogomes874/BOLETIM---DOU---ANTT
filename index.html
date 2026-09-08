@@ -4316,60 +4316,8 @@
     function destacarNomenclaturaAto(titulo) {
       const texto = String(titulo || '').trim();
 
-      const especies = [
-        'INSTRUÇÃO NORMATIVA',
-        'ORDEM DE SERVIÇO',
-        'RESULTADO DE JULGAMENTO',
-        'PORTARIA DE PESSOAL',
-        'PORTARIA CONJUNTA',
-        'PORTARIA',
-        'DELIBERAÇÃO',
-        'RESOLUÇÃO',
-        'DECISÃO',
-        'RETIFICAÇÃO',
-        'DESPACHO',
-        'EDITAL',
-        'AVISO',
-        'COMUNICADO',
-        'EXTRATO',
-        'ATO',
-        'SÚMULA',
-        'REGULAMENTO'
-      ];
-
-      const textoMaiusculo =
-        texto.toLocaleUpperCase('pt-BR');
-
-      for (const especie of especies) {
-        if (
-          textoMaiusculo.startsWith(
-            especie.toLocaleUpperCase('pt-BR')
-          )
-        ) {
-          const inicio =
-            texto.substring(
-              0,
-              especie.length
-            );
-
-          const restante =
-            texto.substring(
-              especie.length
-            );
-
-          return (
-            '<span style="font-weight:700 !important;">' +
-            escaparHTMLBoletim(inicio) +
-            '</span>' +
-            '<span style="font-weight:normal !important;">' +
-            escaparHTMLBoletim(restante) +
-            '</span>'
-          );
-        }
-      }
-
       return (
-        '<span style="font-weight:normal !important;">' +
+        '<span style="font-weight:700 !important;">' +
         escaparHTMLBoletim(texto) +
         '</span>'
       );
