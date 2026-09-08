@@ -512,6 +512,42 @@
             COPIAR BOLETIM PARA O OUTLOOK
           </button>
 
+          <div
+            style="
+              display:flex;
+              gap:8px;
+              flex-wrap:wrap;
+              margin-top:10px;
+            "
+          >
+            <button
+              id="btnCopiarSecao1"
+              type="button"
+              onclick="copiarBoletimParaOutlook(1, 'btnCopiarSecao1')"
+              style="padding:10px 14px;font-weight:700;cursor:pointer;"
+            >
+              COPIAR SEÇÃO 1
+            </button>
+
+            <button
+              id="btnCopiarSecao2"
+              type="button"
+              onclick="copiarBoletimParaOutlook(2, 'btnCopiarSecao2')"
+              style="padding:10px 14px;font-weight:700;cursor:pointer;"
+            >
+              COPIAR SEÇÃO 2
+            </button>
+
+            <button
+              id="btnCopiarSecao3"
+              type="button"
+              onclick="copiarBoletimParaOutlook(3, 'btnCopiarSecao3')"
+              style="padding:10px 14px;font-weight:700;cursor:pointer;"
+            >
+              COPIAR SEÇÃO 3
+            </button>
+          </div>
+
           <div id="statusBoletim" style="margin-top:12px;"></div>
           <div id="statusOutlook" style="margin-top:8px;"></div>
 
@@ -674,24 +710,10 @@
             if (
               texto &&
               !texto.endsWith('\n') &&
-              !texto.endsWith(' ')
+              !texto.endsWith(' ') &&
+              distanciaX > 0.5
             ) {
-              const alturaBase = Math.max(
-                alturaAnterior || 0,
-                altura || 0,
-                7
-              );
-
-              const limiteColuna = Math.max(
-                22,
-                alturaBase * 2.4
-              );
-
-              if (distanciaX >= limiteColuna) {
-                texto += ' ⟦COL⟧ ';
-              } else if (distanciaX > 0.5) {
-                texto += ' ';
-              }
+              texto += ' ';
             }
           }
 
@@ -1047,7 +1069,7 @@
       return String(texto || '')
         .replace(/\r/g, '')
         .replace(/\u00A0/g, ' ')
-        // Não remover "*": o DOU usa asteriscos em notas e observações.
+        // Preserva *, ** e demais marcações utilizadas pelo DOU.
         .replace(/[ \t]+/g, ' ')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
@@ -1462,17 +1484,16 @@
       );
 
       if (cabecalho) {
-        const textoSemAsteriscos =
-          texto.replace(/\*/g, '');
+        const textoComparacao = texto;
 
         const primeira =
-          textoSemAsteriscos.indexOf(
+          textoComparacao.indexOf(
             cabecalho
           );
 
         if (primeira !== -1) {
           const segunda =
-            textoSemAsteriscos.indexOf(
+            textoComparacao.indexOf(
               cabecalho,
               primeira +
               cabecalho.length
@@ -2038,6 +2059,11 @@
         else if (
           temMencaoANTT
         ) {
+          /*
+            Menção normativa isolada não torna o ato relevante.
+            Ex.: Polícia Rodoviária Federal citando "Resoluções da ANTT".
+            A publicação só entra quando foi identificada antes como ANTT_DIRETO.
+          */
           classificacao =
             'OUTRO_ORGAO_CITA_ANTT';
 
@@ -3136,10 +3162,16 @@
           ? window.contextosCorrigidosDOU
           : window.relevantesDOU;
 
+      const somenteDiretos = lista =>
+        [...(lista || [])].filter(
+          item =>
+            item.classificacao === 'ANTT_DIRETO'
+        );
+
       return {
-        1: [...(fonte?.[1] || [])],
-        2: [...(fonte?.[2] || [])],
-        3: [...(fonte?.[3] || [])]
+        1: somenteDiretos(fonte?.[1]),
+        2: somenteDiretos(fonte?.[2]),
+        3: somenteDiretos(fonte?.[3])
       };
     }
 
@@ -3165,46 +3197,41 @@
         ''
       );
 
-      const unidadesPorSigla = [
+      const porSigla = [
         {
           regex: /\bSUPAS\b/,
           nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO DE PASSAGEIROS'
         },
         {
-          regex: /\bSUROD\b|\bSUROC\b/,
+          regex: /\bSUROD\b/,
           nome: 'SUPERINTENDÊNCIA DE INFRAESTRUTURA RODOVIÁRIA'
+        },
+        {
+          regex: /\bSUROC\b|\bSUESP\b/,
+          nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO E MULTIMODAL DE CARGAS'
         },
         {
           regex: /\bSUFER\b/,
           nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
         },
         {
-          regex: /\bSUESP\b/,
-          nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO E MULTIMODAL DE CARGAS'
-        },
-        {
           regex: /\bSUDEG\b/,
           nome: 'SUPERINTENDÊNCIA DE GESTÃO ADMINISTRATIVA'
-        },
-        {
-          regex: /\bDG\b/,
-          nome: 'DIRETORIA-GERAL'
         }
       ];
 
-      for (const entrada of unidadesPorSigla) {
+      for (const entrada of porSigla) {
         if (entrada.regex.test(titulo)) {
           return entrada.nome;
         }
       }
 
-      const contexto = normalizarLinhaUnidade(
-        item.contexto_orgao || ''
-      );
+      const contexto =
+        obterContextoImediatoANTT(item);
 
-      const contextoN = normalizarRelevancia(contexto);
+      const n = normalizarRelevancia(contexto);
 
-      const mapaContexto = [
+      const mapa = [
         {
           regex: /SUPERINTENDENCIA DE INFRAESTRUTURA RODOVIARIA/,
           nome: 'SUPERINTENDÊNCIA DE INFRAESTRUTURA RODOVIÁRIA'
@@ -3214,12 +3241,12 @@
           nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO DE PASSAGEIROS'
         },
         {
-          regex: /SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO/,
-          nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
-        },
-        {
           regex: /SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS/,
           nome: 'SUPERINTENDÊNCIA DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO E MULTIMODAL DE CARGAS'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO/,
+          nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
         },
         {
           regex: /SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA/,
@@ -3235,19 +3262,8 @@
         }
       ];
 
-      for (const entrada of mapaContexto) {
-        if (entrada.regex.test(contextoN)) {
-          return entrada.nome;
-        }
-      }
-
-      const inicioConteudo = normalizarRelevancia(
-        item.conteudo ||
-        `${item.cabecalho || ''}\n${item.corpo || ''}`
-      ).slice(0, 1800);
-
-      for (const entrada of mapaContexto) {
-        if (entrada.regex.test(inicioConteudo)) {
+      for (const entrada of mapa) {
+        if (entrada.regex.test(n)) {
           return entrada.nome;
         }
       }
@@ -3255,8 +3271,146 @@
       return '';
     }
 
+    function obterContextoImediatoANTT(item) {
+      const secao = String(item.secao || '');
+      const textoSecao = String(window.textosDOU?.[secao] || '');
+      const posicao = Number(
+        item.posicao_inicio ??
+        item.posicao ??
+        0
+      );
+
+      if (!textoSecao || !Number.isFinite(posicao)) {
+        return String(item.contexto_orgao || '');
+      }
+
+      const inicio = Math.max(0, posicao - 3500);
+      const trecho = textoSecao.substring(inicio, posicao);
+
+      const linhas = trecho
+        .split('\n')
+        .map(linha => linha.trim())
+        .filter(Boolean);
+
+      const reconhecidas = [];
+
+      for (let i = linhas.length - 1; i >= 0; i--) {
+        const linha = linhas[i];
+        const n = normalizarRelevancia(linha);
+
+        if (
+          /^SUPERINTENDENCIA DE INFRAESTRUTURA RODOVIARIA$/.test(n) ||
+          /^SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO DE PASSAGEIROS$/.test(n) ||
+          /^SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS$/.test(n) ||
+          /^SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO$/.test(n) ||
+          /^SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA$/.test(n) ||
+          /^DIRETORIA COLEGIADA$/.test(n) ||
+          /^COMISSOES? DE OUTORGA$/.test(n)
+        ) {
+          reconhecidas.unshift(linha);
+          break;
+        }
+
+        if (
+          /^AGENCIA NACIONAL DE TRANSPORTES TERRESTRES$/.test(n)
+        ) {
+          break;
+        }
+
+        /*
+          Se já encontramos outro órgão principal antes da ANTT,
+          não carregamos unidade antiga de uma publicação anterior.
+        */
+        if (
+          /^MINISTERIO PUBLICO\b/.test(n) ||
+          /^POLICIA RODOVIARIA FEDERAL$/.test(n) ||
+          /^DEPARTAMENTO NACIONAL\b/.test(n) ||
+          /^AGENCIA NACIONAL\b/.test(n)
+        ) {
+          break;
+        }
+      }
+
+      if (reconhecidas.length) {
+        return reconhecidas.join('\n');
+      }
+
+      return String(item.contexto_orgao || '');
+    }
+
     function detectarOrgaoExterno(item) {
-      return '';
+      if (
+        item.classificacao !==
+        'OUTRO_ORGAO_CITA_ANTT'
+      ) {
+        return '';
+      }
+
+      const contexto =
+        normalizarLinhaUnidade(
+          item.contexto_orgao || ''
+        );
+
+      return contexto;
+    }
+
+    function limparCorpoInstitucionalBoletim(item, unidade) {
+      let corpo = String(
+        item.corpo ||
+        item.conteudo ||
+        ''
+      ).trim();
+
+      if (!corpo) {
+        return '';
+      }
+
+      const linhas = corpo
+        .replace(/\r/g, '')
+        .split('\n');
+
+      const alvos = [
+        'AGÊNCIA NACIONAL DE TRANSPORTES TERRESTRES',
+        unidade || ''
+      ]
+        .filter(Boolean)
+        .map(normalizarRelevancia);
+
+      /*
+        Remove somente linhas institucionais isoladas no começo/fim do corpo.
+        Não remove menções existentes dentro dos artigos.
+      */
+      while (linhas.length) {
+        const primeira = String(linhas[0] || '').trim();
+        const nPrimeira = normalizarRelevancia(primeira);
+
+        if (
+          !primeira ||
+          alvos.includes(nPrimeira)
+        ) {
+          linhas.shift();
+          continue;
+        }
+
+        break;
+      }
+
+      while (linhas.length) {
+        const ultima = String(linhas[linhas.length - 1] || '').trim();
+        const nUltima = normalizarRelevancia(ultima);
+
+        if (
+          !ultima ||
+          alvos.includes(nUltima)
+        ) {
+          linhas.pop();
+          continue;
+        }
+
+        break;
+      }
+
+      return linhas.join('\n').trim();
     }
 
     function formatarDataExtenso(dataIso) {
@@ -3312,50 +3466,108 @@
     }
 
 
-    function linhaTemColunasPDF(linha) {
-      return String(linha || '').includes('⟦COL⟧');
+    function linhaEhTabelaDOU(linha) {
+      const l = String(linha || '').trim();
+
+      return (
+        /^\.\s*\.\s*(?:Item|\d+)\b/i.test(l) ||
+        /^\.\s*\.(?:Item|\d+)\b/i.test(l)
+      );
     }
 
-    function separarColunasPDF(linha) {
-      return String(linha || '')
-        .split('⟦COL⟧')
-        .map(celula => celula.trim());
+    function separarCelulasTabelaDOU(linha) {
+      let l = String(linha || '')
+        .replace(/^\s*\.\s*/, '')
+        .trim();
+
+      /*
+        O extrator textual do DOU costuma representar as divisões de
+        célula por pontos: ". .1 .Argentina .ATIT ...".
+      */
+      let partes = l
+        .split(/\s+\.(?=\S)/)
+        .map(v => v.replace(/^\.\s*/, '').trim());
+
+      if (partes.length < 2) {
+        partes = l
+          .split(/\.(?=\s*[A-Za-zÀ-ÖØ-öø-ÿ0-9])/)
+          .map(v => v.trim())
+          .filter(Boolean);
+      }
+
+      return partes.filter((v, i) => v || i === 0);
     }
 
-    function montarTabelaBoletim(linhasTabela) {
-      if (!Array.isArray(linhasTabela) || !linhasTabela.length) {
+    function normalizarNumeroColunasTabela(linhas) {
+      const linhasSeparadas = linhas
+        .map(separarCelulasTabelaDOU)
+        .filter(c => c.length >= 2);
+
+      if (!linhasSeparadas.length) {
+        return [];
+      }
+
+      /*
+        Para as tabelas do DOU/ANTT, os dois primeiros pontos são
+        marcadores editoriais. Retiramos células vazias residuais.
+      */
+      return linhasSeparadas.map(celulas =>
+        celulas.filter(c => String(c || '').trim() !== '')
+      );
+    }
+
+    function montarTabelaHTMLDOU(linhas, outlook = false) {
+      const dados = normalizarNumeroColunasTabela(linhas);
+
+      if (!dados.length) {
         return '';
       }
 
-      const linhas = linhasTabela.map(separarColunasPDF);
       const maxColunas = Math.max(
-        1,
-        ...linhas.map(celulas => celulas.length)
+        ...dados.map(c => c.length)
       );
 
-      const linhasHTML = linhas.map(celulas => {
-        const ajustadas = [...celulas];
+      const qtdColunas = Math.max(2, Math.min(maxColunas, 7));
 
-        while (ajustadas.length < maxColunas) {
-          ajustadas.push('');
+      const linhasHTML = dados.map((celulas, indice) => {
+        const c = [...celulas];
+
+        /*
+          Se o extrator devolveu células demais, unimos o excedente na
+          última coluna. Isso evita a criação de dezenas de colunas.
+        */
+        if (c.length > qtdColunas) {
+          const excesso = c.splice(qtdColunas - 1);
+          c.push(excesso.join(' '));
         }
+
+        while (c.length < qtdColunas) {
+          c.push('');
+        }
+
+        const cabecalho =
+          indice === 0 &&
+          c.some(v => /Item|Transporte|Abrangência|Categoria|Aspecto|Instrumento/i.test(v));
 
         return `
           <tr>
-            ${ajustadas.map(celula => `
+            ${c.map(valor => `
               <td
                 valign="top"
                 style="
-                  border:1px solid #7f7f7f;
-                  padding:4pt 5pt;
+                  border:1px solid #8a8a8a;
+                  padding:${outlook ? '3pt 4pt' : '4px 5px'};
                   font-family:Calibri,Arial,sans-serif !important;
-                  font-size:10.5pt !important;
-                  font-weight:400 !important;
+                  font-size:${outlook ? '8.5pt' : '11px'} !important;
+                  line-height:1.2;
+                  font-weight:${cabecalho ? '700' : '400'} !important;
                   color:#000000 !important;
                   text-align:left;
                   vertical-align:top;
+                  word-break:normal;
+                  overflow-wrap:anywhere;
                 "
-              >${escaparHTMLBoletim(celula)}</td>
+              >${escaparHTMLBoletim(valor)}</td>
             `).join('')}
           </tr>
         `;
@@ -3371,8 +3583,9 @@
           style="
             width:100%;
             border-collapse:collapse;
-            margin:3pt 0 9pt 0;
-            table-layout:auto;
+            table-layout:fixed;
+            margin:5pt 0 9pt 0;
+            background:#ffffff;
           "
         >
           ${linhasHTML}
@@ -3380,7 +3593,83 @@
       `;
     }
 
-    function formatarCorpoBoletim(texto) {
+    function extrairBlocosTabelaDOU(texto) {
+      const linhas = String(texto || '')
+        .replace(/\r/g, '')
+        .split('\n');
+
+      const saida = [];
+      let textoAtual = [];
+      let tabelaAtual = [];
+      let emTabela = false;
+
+      function fecharTexto() {
+        if (textoAtual.length) {
+          saida.push({
+            tipo: 'texto',
+            texto: textoAtual.join('\n')
+          });
+          textoAtual = [];
+        }
+      }
+
+      function fecharTabela() {
+        if (tabelaAtual.length) {
+          saida.push({
+            tipo: 'tabela',
+            linhas: [...tabelaAtual]
+          });
+          tabelaAtual = [];
+        }
+        emTabela = false;
+      }
+
+      for (const linhaOriginal of linhas) {
+        const linha = String(linhaOriginal || '').trim();
+
+        if (linhaEhTabelaDOU(linha)) {
+          fecharTexto();
+          emTabela = true;
+          tabelaAtual.push(linha);
+          continue;
+        }
+
+        if (emTabela) {
+          /*
+            Continuação de célula: enquanto não chegarmos em Observações,
+            artigo seguinte ou outro bloco jurídico, mantemos o conteúdo
+            junto da última linha da tabela.
+          */
+          if (
+            /^Observações\s*:/i.test(linha) ||
+            /^Art\.\s*\d+/i.test(linha) ||
+            /^Art\s+\d+/i.test(linha)
+          ) {
+            fecharTabela();
+            textoAtual.push(linha);
+            continue;
+          }
+
+          if (!linha) {
+            continue;
+          }
+
+          if (tabelaAtual.length) {
+            tabelaAtual[tabelaAtual.length - 1] += ' ' + linha;
+          }
+          continue;
+        }
+
+        textoAtual.push(linhaOriginal);
+      }
+
+      fecharTabela();
+      fecharTexto();
+
+      return saida;
+    }
+
+    function formatarTextoNormalBoletim(texto, outlook = false) {
       const bruto = String(texto || '')
         .replace(/\r\n?/g, '\n')
         .trim();
@@ -3395,34 +3684,30 @@
 
       const blocos = [];
       let atual = [];
-      let tabelaAtual = [];
 
-      function fecharAtual() {
-        if (atual.length) {
-          blocos.push({
-            tipo: 'paragrafo',
-            texto: atual.join(' ')
-              .replace(/\s+/g, ' ')
-              .trim()
-          });
-          atual = [];
-        }
+      function fecharAtualLocal() {
+        if (!atual.length) return;
+
+        blocos.push({
+          tipo: 'paragrafo',
+          texto: atual.join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        });
+
+        atual = [];
       }
 
-      function fecharTabela() {
-        if (tabelaAtual.length) {
-          blocos.push({
-            tipo: 'tabela',
-            linhas: [...tabelaAtual]
-          });
-          tabelaAtual = [];
-        }
-      }
-
-      function ehLinhaIsolada(linha) {
+      function ehLinhaIsoladaLocal(linha) {
         if (!linha) return false;
 
-        if (/^\.{3}$/.test(linha)) return true;
+        if (/^\*{1,2}\s+/.test(linha)) {
+          return true;
+        }
+
+        if (/^Observações\s*:/i.test(linha)) {
+          return true;
+        }
 
         if (/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’\-–—*]{2,120}$/.test(linha) &&
             !/[.;:,]$/.test(linha)) {
@@ -3434,21 +3719,12 @@
 
       for (const linha of linhas) {
         if (!linha) {
-          fecharAtual();
-          fecharTabela();
+          fecharAtualLocal();
           continue;
         }
 
-        if (linhaTemColunasPDF(linha)) {
-          fecharAtual();
-          tabelaAtual.push(linha);
-          continue;
-        }
-
-        fecharTabela();
-
-        if (ehLinhaIsolada(linha)) {
-          fecharAtual();
+        if (ehLinhaIsoladaLocal(linha)) {
+          fecharAtualLocal();
           blocos.push({
             tipo: 'isolada',
             texto: linha
@@ -3462,24 +3738,74 @@
           /[.!?;:]$/.test(linha) ||
           /\)\s*$/.test(linha)
         ) {
-          fecharAtual();
+          fecharAtualLocal();
         }
       }
 
-      fecharAtual();
-      fecharTabela();
+      fecharAtualLocal();
+
+      return blocos.map(bloco => {
+        const seguro = escaparHTMLBoletim(bloco.texto);
+
+        if (!outlook) {
+          const classe =
+            bloco.tipo === 'isolada'
+              ? 'boletim-linha-isolada'
+              : 'boletim-paragrafo';
+
+          return `<div class="${classe}">${seguro}</div>`;
+        }
+
+        if (bloco.tipo === 'isolada') {
+          return `
+            <div
+              style="
+                margin:0 0 6pt 0;
+                padding:0;
+                font-family:Calibri,Arial,sans-serif !important;
+                font-size:11pt !important;
+                font-weight:400 !important;
+                line-height:1.35;
+                color:#000000 !important;
+                text-align:left;
+              "
+            >${seguro}</div>
+          `;
+        }
+
+        return `
+          <div
+            style="
+              margin:0 0 9pt 0;
+              padding:0;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              font-weight:400 !important;
+              line-height:1.35;
+              color:#000000 !important;
+              text-align:justify;
+              text-justify:inter-word;
+            "
+          >${seguro}</div>
+        `;
+      }).join('');
+    }
+
+    function formatarCorpoBoletim(texto) {
+      const blocos = extrairBlocosTabelaDOU(texto);
 
       return blocos.map(bloco => {
         if (bloco.tipo === 'tabela') {
-          return montarTabelaBoletim(bloco.linhas);
+          return montarTabelaHTMLDOU(
+            bloco.linhas,
+            false
+          );
         }
 
-        const classe =
-          bloco.tipo === 'isolada'
-            ? 'boletim-linha-isolada'
-            : 'boletim-paragrafo';
-
-        return `<div class="${classe}">${escaparHTMLBoletim(bloco.texto)}</div>`;
+        return formatarTextoNormalBoletim(
+          bloco.texto,
+          false
+        );
       }).join('');
     }
 
@@ -3549,11 +3875,10 @@
           ).trim();
 
         const corpo =
-          String(
-            item.corpo ||
-            item.conteudo ||
-            ''
-          ).trim();
+          limparCorpoInstitucionalBoletim(
+            item,
+            unidade
+          );
 
         htmlSecao += `
           <article class="boletim-publicacao">
@@ -3727,155 +4052,21 @@
     }
 
     function formatarCorpoOutlook(texto) {
-      const bruto = String(texto || '')
-        .replace(/\r\n?/g, '\n')
-        .trim();
+      const blocos = extrairBlocosTabelaDOU(texto);
 
-      if (!bruto) {
-        return '';
-      }
-
-      const linhas = bruto
-        .split('\n')
-        .map(linha => linha.trim());
-
-      const blocos = [];
-      let atual = [];
-      let tabelaAtual = [];
-
-      function fecharAtual() {
-        if (!atual.length) {
-          return;
+      return blocos.map(bloco => {
+        if (bloco.tipo === 'tabela') {
+          return montarTabelaHTMLDOU(
+            bloco.linhas,
+            true
+          );
         }
 
-        blocos.push({
-          tipo: 'paragrafo',
-          texto: atual
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-        });
-
-        atual = [];
-      }
-
-      function fecharTabela() {
-        if (!tabelaAtual.length) {
-          return;
-        }
-
-        blocos.push({
-          tipo: 'tabela',
-          linhas: [...tabelaAtual]
-        });
-
-        tabelaAtual = [];
-      }
-
-      function ehLinhaIsolada(linha) {
-        if (!linha) {
-          return false;
-        }
-
-        if (/^\.{3}$/.test(linha)) {
-          return true;
-        }
-
-        if (
-          /^[A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ\s.'’\-–—*]{2,120}$/.test(linha) &&
-          !/[.;:,]$/.test(linha)
-        ) {
-          return true;
-        }
-
-        return false;
-      }
-
-      for (const linha of linhas) {
-        if (!linha) {
-          fecharAtual();
-          fecharTabela();
-          continue;
-        }
-
-        if (linhaTemColunasPDF(linha)) {
-          fecharAtual();
-          tabelaAtual.push(linha);
-          continue;
-        }
-
-        fecharTabela();
-
-        if (ehLinhaIsolada(linha)) {
-          fecharAtual();
-
-          blocos.push({
-            tipo: 'isolada',
-            texto: linha
-          });
-
-          continue;
-        }
-
-        atual.push(linha);
-
-        if (
-          /[.!?;:]$/.test(linha) ||
-          /\)\s*$/.test(linha)
-        ) {
-          fecharAtual();
-        }
-      }
-
-      fecharAtual();
-      fecharTabela();
-
-      return blocos
-        .map(bloco => {
-          if (bloco.tipo === 'tabela') {
-            return montarTabelaBoletim(bloco.linhas);
-          }
-
-          const textoSeguro = escaparHTMLBoletim(bloco.texto);
-
-          if (bloco.tipo === 'isolada') {
-            return `
-              <div
-                style="
-                  margin:0 0 6pt 0;
-                  padding:0;
-                  font-family:Calibri,Arial,sans-serif !important;
-                  font-size:11pt !important;
-                  font-weight:400 !important;
-                  font-style:normal !important;
-                  line-height:1.35;
-                  color:#000000 !important;
-                  text-align:left;
-                  mso-line-height-rule:exactly;
-                "
-              >${textoSeguro}</div>
-            `;
-          }
-
-          return `
-            <div
-              style="
-                margin:0 0 9pt 0;
-                padding:0;
-                font-family:Calibri,Arial,sans-serif !important;
-                font-size:11pt !important;
-                font-weight:400 !important;
-                font-style:normal !important;
-                line-height:1.35;
-                color:#000000 !important;
-                text-align:justify;
-                text-justify:inter-word;
-                mso-line-height-rule:exactly;
-              "
-            >${textoSeguro}</div>
-          `;
-        })
-        .join('');
+        return formatarTextoNormalBoletim(
+          bloco.texto,
+          true
+        );
+      }).join('');
     }
 
     function montarSecaoOutlook(secao, itens) {
@@ -3983,11 +4174,11 @@
           ''
         ).trim();
 
-        const corpo = String(
-          item.corpo ||
-          item.conteudo ||
-          ''
-        ).trim();
+        const corpo =
+          limparCorpoInstitucionalBoletim(
+            item,
+            unidade
+          );
 
         conteudo += `
           <tr>
@@ -4038,9 +4229,9 @@
           cellpadding="0"
           cellspacing="0"
           border="0"
-          width="600"
+          width="100%"
           style="
-            width:600px;
+            width:100%;
             border-collapse:collapse;
             border:1px solid #7f7f7f;
             background:#ffffff;
@@ -4063,7 +4254,7 @@
       `;
     }
 
-    function montarHtmlOutlookParaCopia() {
+    function montarHtmlOutlookParaCopia(secaoAlvo = null) {
       const numero = String(
         document.getElementById('numeroDouBoletim')?.value || ''
       ).trim();
@@ -4087,13 +4278,19 @@
       const publicacoes = obterPublicacoesParaBoletim();
 
       const total =
-        publicacoes[1].length +
-        publicacoes[2].length +
-        publicacoes[3].length;
+        secaoAlvo
+          ? (publicacoes[Number(secaoAlvo)] || []).length
+          : (
+              publicacoes[1].length +
+              publicacoes[2].length +
+              publicacoes[3].length
+            );
 
       if (total === 0) {
         throw new Error(
-          'Processe os PDFs antes de copiar o boletim.'
+          secaoAlvo
+            ? `Não há publicações relevantes na Seção ${secaoAlvo}.`
+            : 'Processe os PDFs antes de copiar o boletim.'
         );
       }
 
@@ -4127,16 +4324,16 @@
             cellpadding="0"
             cellspacing="0"
             border="0"
-            width="600"
+            width="100%"
             style="
-              width:600px;
+              width:100%;
               border-collapse:collapse;
               background:#ffffff;
               font-family:Calibri,Arial,sans-serif !important;
               font-size:11pt !important;
               font-weight:400 !important;
               color:#000000 !important;
-              margin:0 auto;
+              margin:0;
             "
           >
             <tr>
@@ -4154,10 +4351,10 @@
                       <img
                         src="${bannerSrc}"
                         alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
-                        width="600"
+                        width="100%"
                         style="
                           display:block;
-                          width:600px;
+                          width:100%;
                           height:auto;
                           border:0;
                           margin:0;
@@ -4204,20 +4401,7 @@
                   line-height:1.2;
                 "
               >
-                <font
-                  face="Segoe UI"
-                  color="#FFFFFF"
-                  style="
-                    font-family:'Segoe UI',Arial,sans-serif;
-                    font-size:13pt;
-                    font-weight:700;
-                    color:#FFFFFF !important;
-                  "
-                >
-                  <b style="color:#FFFFFF !important;">
-                    ${escaparHTMLBoletim(tituloFaixa)}
-                  </b>
-                </font>
+                ${escaparHTMLBoletim(tituloFaixa)}
               </td>
             </tr>
 
@@ -4232,9 +4416,18 @@
                   color:#000000 !important;
                 "
               >
-                ${montarSecaoOutlook(1, publicacoes[1])}
-                ${montarSecaoOutlook(2, publicacoes[2])}
-                ${montarSecaoOutlook(3, publicacoes[3])}
+                ${
+                  secaoAlvo
+                    ? montarSecaoOutlook(
+                        Number(secaoAlvo),
+                        publicacoes[Number(secaoAlvo)] || []
+                      )
+                    : `
+                        ${montarSecaoOutlook(1, publicacoes[1])}
+                        ${montarSecaoOutlook(2, publicacoes[2])}
+                        ${montarSecaoOutlook(3, publicacoes[3])}
+                      `
+                }
               </td>
             </tr>
           </table>
@@ -4242,8 +4435,12 @@
       `;
     }
 
-    async function copiarBoletimParaOutlook() {
-      const botao = document.getElementById('btnCopiarOutlook');
+    async function copiarBoletimParaOutlook(
+      secaoAlvo = null,
+      botaoId = 'btnCopiarOutlook'
+    ) {
+      const botao = document.getElementById(botaoId);
+      const textoOriginal = botao?.textContent || '';
 
       try {
         if (botao) {
@@ -4252,7 +4449,9 @@
         }
 
         statusOutlook(
-          'Preparando o boletim formatado para copiar...'
+          secaoAlvo
+            ? `Preparando a Seção ${secaoAlvo} para copiar...`
+            : 'Preparando o boletim formatado para copiar...'
         );
 
         const previa = document.getElementById('previaBoletim');
@@ -4264,9 +4463,14 @@
           gerarPreviaBoletim();
         }
 
-        const html = montarHtmlOutlookParaCopia();
+        const html =
+          montarHtmlOutlookParaCopia(
+            secaoAlvo
+          );
 
-        const areaTemporaria = document.createElement('div');
+        const areaTemporaria =
+          document.createElement('div');
+
         areaTemporaria.innerHTML = html;
 
         const textoSimples =
@@ -4292,23 +4496,33 @@
 
           await navigator.clipboard.write([item]);
         } else {
-          const container = document.createElement('div');
+          const container =
+            document.createElement('div');
 
           container.style.position = 'fixed';
           container.style.left = '-99999px';
           container.style.top = '0';
           container.innerHTML = html;
 
-          document.body.appendChild(container);
+          document.body.appendChild(
+            container
+          );
 
-          const range = document.createRange();
-          range.selectNodeContents(container);
+          const range =
+            document.createRange();
 
-          const selecao = window.getSelection();
+          range.selectNodeContents(
+            container
+          );
+
+          const selecao =
+            window.getSelection();
+
           selecao.removeAllRanges();
           selecao.addRange(range);
 
-          const copiado = document.execCommand('copy');
+          const copiado =
+            document.execCommand('copy');
 
           selecao.removeAllRanges();
           container.remove();
@@ -4321,24 +4535,26 @@
         }
 
         statusOutlook(
-          'Boletim copiado. Abra um novo e-mail no Outlook e pressione Ctrl+V.'
+          secaoAlvo
+            ? `Seção ${secaoAlvo} copiada. Abra o Outlook e pressione Ctrl+V.`
+            : 'Boletim completo copiado. Abra o Outlook e pressione Ctrl+V.'
         );
       } catch (erro) {
         console.error(
-          'Erro ao copiar o boletim para o Outlook:',
+          'Erro ao copiar para o Outlook:',
           erro
         );
 
         statusOutlook(
           erro.message ||
-          'Não foi possível copiar o boletim para o Outlook.',
+          'Não foi possível copiar o conteúdo para o Outlook.',
           true
         );
       } finally {
         if (botao) {
           botao.disabled = false;
           botao.textContent =
-            'COPIAR BOLETIM PARA O OUTLOOK';
+            textoOriginal;
         }
       }
     }
