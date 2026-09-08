@@ -3813,6 +3813,7 @@
                   line-height:1.2;
                   font-weight:${cabecalho ? '700' : '400'} !important;
                   color:#000000 !important;
+                  font-weight:normal !important;
                   text-align:left;
                   vertical-align:top;
                   word-break:normal;
@@ -4024,8 +4025,8 @@
                 margin:0 0 6pt 0;
                 padding:0;
                 font-family:Calibri,Arial,sans-serif !important;
-                font-size:11pt !important;
-                font-weight:400 !important;
+                font-size:9pt !important;
+                font-weight:normal !important;
                 line-height:1.35;
                 color:#000000 !important;
                 text-align:left;
@@ -4040,8 +4041,8 @@
               margin:0 0 9pt 0;
               padding:0;
               font-family:Calibri,Arial,sans-serif !important;
-              font-size:11pt !important;
-              font-weight:400 !important;
+              font-size:9pt !important;
+              font-weight:normal !important;
               line-height:1.35;
               color:#000000 !important;
               text-align:justify;
@@ -4342,8 +4343,8 @@
             style="
               padding:18pt 12pt 8pt 12pt;
               font-family:Calibri,Arial,sans-serif !important;
-              font-size:11pt !important;
-              font-weight:400 !important;
+              font-size:9pt !important;
+              font-weight:normal !important;
               color:#000000 !important;
               text-align:center;
               text-decoration:underline;
@@ -4359,8 +4360,8 @@
             style="
               padding:0 12pt 18pt 12pt;
               font-family:Calibri,Arial,sans-serif !important;
-              font-size:11pt !important;
-              font-weight:400 !important;
+              font-size:9pt !important;
+              font-weight:normal !important;
               color:#163a68 !important;
               text-align:center;
               text-transform:uppercase;
@@ -4387,8 +4388,8 @@
                   style="
                     padding:0 12pt 14pt 12pt;
                     font-family:Calibri,Arial,sans-serif !important;
-                    font-size:11pt !important;
-                    font-weight:400 !important;
+                    font-size:9pt !important;
+                    font-weight:normal !important;
                     color:#163a68 !important;
                     text-align:center;
                     text-transform:uppercase;
@@ -4413,8 +4414,8 @@
                   style="
                     padding:0 12pt 14pt 12pt;
                     font-family:Calibri,Arial,sans-serif !important;
-                    font-size:11pt !important;
-                    font-weight:400 !important;
+                    font-size:9pt !important;
+                    font-weight:normal !important;
                     color:#163a68 !important;
                     text-align:center;
                     text-transform:uppercase;
@@ -4447,8 +4448,8 @@
               style="
                 padding:0 12pt 16pt 12pt;
                 font-family:Calibri,Arial,sans-serif !important;
-                font-size:11pt !important;
-                font-weight:400 !important;
+                font-size:9pt !important;
+                font-weight:normal !important;
                 color:#000000 !important;
               "
             >
@@ -4457,9 +4458,10 @@
                   margin:0 0 9pt 0;
                   padding:0;
                   font-family:Calibri,Arial,sans-serif !important;
-                  font-size:11pt !important;
+                  font-size:9pt !important;
                   font-weight:700 !important;
                   color:#000000 !important;
+                  font-weight:normal !important;
                   text-align:left;
                   text-transform:uppercase;
                 "
@@ -4472,8 +4474,8 @@
                   margin:0;
                   padding:0;
                   font-family:Calibri,Arial,sans-serif !important;
-                  font-size:11pt !important;
-                  font-weight:400 !important;
+                  font-size:9pt !important;
+                  font-weight:normal !important;
                   color:#000000 !important;
                 "
               >
@@ -4497,8 +4499,8 @@
             border:1px solid #7f7f7f;
             background:#ffffff;
             font-family:Calibri,Arial,sans-serif !important;
-            font-size:11pt !important;
-            font-weight:400 !important;
+            font-size:9pt !important;
+            font-weight:normal !important;
             color:#000000 !important;
           "
         >
@@ -4568,15 +4570,15 @@
         banner?.getAttribute('src') || ''
       );
 
-      return `
+      return `${(!secaoAlvo || Number(secaoAlvo) === 1) ? `
         <div
           style="
             margin:0;
             padding:0;
             background:#ffffff;
             font-family:Calibri,Arial,sans-serif !important;
-            font-size:11pt !important;
-            font-weight:400 !important;
+            font-size:9pt !important;
+            font-weight:normal !important;
             color:#000000 !important;
           "
         >
@@ -4591,8 +4593,8 @@
               border-collapse:collapse;
               background:#ffffff;
               font-family:Calibri,Arial,sans-serif !important;
-              font-size:11pt !important;
-              font-weight:400 !important;
+              font-size:9pt !important;
+              font-weight:normal !important;
               color:#000000 !important;
               margin:0;
             "
@@ -4603,7 +4605,7 @@
                   padding:0;
                   margin:0;
                   line-height:0;
-                  font-weight:400 !important;
+                  font-weight:normal !important;
                 "
               >
                 ${
@@ -4634,9 +4636,9 @@
                 style="
                   padding:14pt 10pt 9pt 10pt;
                   font-family:Calibri,Arial,sans-serif !important;
-                  font-size:11pt !important;
+                  font-size:9pt !important;
                   line-height:1.35;
-                  font-weight:400 !important;
+                  font-weight:normal !important;
                   color:#000000 !important;
                   text-align:center;
                 "
@@ -4672,12 +4674,12 @@
                   padding:14pt 0 0 0;
                   background:#ffffff;
                   font-family:Calibri,Arial,sans-serif !important;
-                  font-size:11pt !important;
-                  font-weight:400 !important;
+                  font-size:9pt !important;
+                  font-weight:normal !important;
                   color:#000000 !important;
                 "
               >
-                ${
+                ` : ''}${
                   secaoAlvo
                     ? montarSecaoOutlook(
                         Number(secaoAlvo),
