@@ -507,9 +507,36 @@
             id="btnCopiarOutlook"
             type="button"
             onclick="copiarBoletimParaOutlook()"
-            style="padding:12px 18px;font-weight:700;cursor:pointer;"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;margin-right:8px;margin-bottom:8px;"
           >
-            COPIAR BOLETIM PARA O OUTLOOK
+            COPIAR BOLETIM COMPLETO
+          </button>
+
+          <button
+            id="btnCopiarSecao1"
+            type="button"
+            onclick="copiarSecaoParaOutlook(1)"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;margin-right:8px;margin-bottom:8px;"
+          >
+            COPIAR SEÇÃO 1
+          </button>
+
+          <button
+            id="btnCopiarSecao2"
+            type="button"
+            onclick="copiarSecaoParaOutlook(2)"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;margin-right:8px;margin-bottom:8px;"
+          >
+            COPIAR SEÇÃO 2
+          </button>
+
+          <button
+            id="btnCopiarSecao3"
+            type="button"
+            onclick="copiarSecaoParaOutlook(3)"
+            style="padding:12px 18px;font-weight:700;cursor:pointer;margin-bottom:8px;"
+          >
+            COPIAR SEÇÃO 3
           </button>
 
           <div id="statusBoletim" style="margin-top:12px;"></div>
@@ -3882,9 +3909,9 @@
           cellpadding="0"
           cellspacing="0"
           border="0"
-          width="100%"
+          width="600"
           style="
-            width:100%;
+            width:600px;
             border-collapse:collapse;
             border:1px solid #7f7f7f;
             background:#ffffff;
@@ -3971,9 +3998,9 @@
             cellpadding="0"
             cellspacing="0"
             border="0"
-            width="700"
+            width="600"
             style="
-              width:700px;
+              width:600px;
               border-collapse:collapse;
               background:#ffffff;
               font-family:Calibri,Arial,sans-serif !important;
@@ -3998,10 +4025,10 @@
                       <img
                         src="${bannerSrc}"
                         alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
-                        width="700"
+                        width="600"
                         style="
                           display:block;
-                          width:700px;
+                          width:600px;
                           height:auto;
                           border:0;
                           margin:0;
@@ -4048,7 +4075,20 @@
                   line-height:1.2;
                 "
               >
-                ${escaparHTMLBoletim(tituloFaixa)}
+                <font
+                  face="Segoe UI"
+                  color="#FFFFFF"
+                  style="
+                    font-family:'Segoe UI',Arial,sans-serif;
+                    font-size:13pt;
+                    font-weight:700;
+                    color:#FFFFFF !important;
+                  "
+                >
+                  <b style="color:#FFFFFF !important;">
+                    ${escaparHTMLBoletim(tituloFaixa)}
+                  </b>
+                </font>
               </td>
             </tr>
 
@@ -4073,6 +4113,296 @@
       `;
     }
 
+
+    function montarHtmlSecaoOutlookParaCopia(secao) {
+      const numero = String(
+        document.getElementById('numeroDouBoletim')?.value || ''
+      ).trim();
+
+      const dataIso = String(
+        document.getElementById('dataDouBoletim')?.value || ''
+      ).trim();
+
+      if (!numero) {
+        throw new Error(
+          'Informe o número do DOU antes de copiar a seção.'
+        );
+      }
+
+      if (!dataIso) {
+        throw new Error(
+          'Informe a data do DOU antes de copiar a seção.'
+        );
+      }
+
+      const publicacoes = obterPublicacoesParaBoletim();
+      const itens = publicacoes[secao] || [];
+
+      if (itens.length === 0) {
+        throw new Error(
+          `Não há publicações da Seção ${secao} para copiar.`
+        );
+      }
+
+      const dataFormatada = formatarDataExtenso(dataIso);
+      const tituloFaixa =
+        `DIÁRIO OFICIAL DA UNIÃO – DOU Nº ${numero}, ${dataFormatada.diaSemana}, ${dataFormatada.dataExtenso}`;
+
+      const banner = document.querySelector(
+        '#previaBoletim .boletim-banner-imagem img'
+      );
+
+      const bannerSrc = String(
+        banner?.getAttribute('src') || ''
+      );
+
+      // A Seção 1 leva o cabeçalho completo do boletim.
+      // As Seções 2 e 3 levam somente a respectiva caixa, para serem
+      // coladas em sequência no mesmo e-mail sem repetir o cabeçalho.
+      const cabecalho = secao === 1 ? `
+        <tr>
+          <td
+            style="
+              padding:0;
+              margin:0;
+              line-height:0;
+              font-weight:400 !important;
+            "
+          >
+            ${
+              bannerSrc
+                ? `
+                  <img
+                    src="${bannerSrc}"
+                    alt="ANTT - Diário Oficial da União e ANTTLegis - Publicações Oficiais"
+                    width="600"
+                    style="
+                      display:block;
+                      width:600px;
+                      height:auto;
+                      border:0;
+                      margin:0;
+                      padding:0;
+                    "
+                  >
+                `
+                : ''
+            }
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            align="center"
+            style="
+              padding:14pt 10pt 9pt 10pt;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              line-height:1.35;
+              font-weight:400 !important;
+              color:#000000 !important;
+              text-align:center;
+            "
+          >
+            SECRETARIA-GERAL (SEGER)
+            <br>
+            GABINETE DO DIRETOR-GERAL (GAB-DG)
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            align="center"
+            bgcolor="#233f73"
+            style="
+              background:#233f73 !important;
+              color:#ffffff !important;
+              font-family:'Segoe UI',Arial,sans-serif !important;
+              font-size:13pt !important;
+              font-weight:700 !important;
+              text-align:center;
+              padding:11pt 8pt;
+              line-height:1.2;
+            "
+          >
+            <font
+              face="Segoe UI"
+              color="#FFFFFF"
+              style="
+                font-family:'Segoe UI',Arial,sans-serif;
+                font-size:13pt;
+                font-weight:700;
+                color:#FFFFFF !important;
+              "
+            >
+              <b style="color:#FFFFFF !important;">
+                ${escaparHTMLBoletim(tituloFaixa)}
+              </b>
+            </font>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="height:14pt;line-height:14pt;font-size:1px;">&nbsp;</td>
+        </tr>
+      ` : '';
+
+      return `
+        <div
+          style="
+            margin:0;
+            padding:0;
+            background:#ffffff;
+            font-family:Calibri,Arial,sans-serif !important;
+            font-size:11pt !important;
+            font-weight:400 !important;
+            color:#000000 !important;
+          "
+        >
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="600"
+            style="
+              width:600px;
+              border-collapse:collapse;
+              background:#ffffff;
+              font-family:Calibri,Arial,sans-serif !important;
+              font-size:11pt !important;
+              font-weight:400 !important;
+              color:#000000 !important;
+              margin:0 auto;
+            "
+          >
+            ${cabecalho}
+            <tr>
+              <td
+                style="
+                  padding:0;
+                  background:#ffffff;
+                  font-family:Calibri,Arial,sans-serif !important;
+                  font-size:11pt !important;
+                  font-weight:400 !important;
+                  color:#000000 !important;
+                "
+              >
+                ${montarSecaoOutlook(secao, itens)}
+              </td>
+            </tr>
+          </table>
+        </div>
+      `;
+    }
+
+    async function gravarHtmlNaAreaTransferencia(html) {
+      const areaTemporaria = document.createElement('div');
+      areaTemporaria.innerHTML = html;
+
+      const textoSimples =
+        areaTemporaria.innerText ||
+        areaTemporaria.textContent ||
+        '';
+
+      if (
+        navigator.clipboard &&
+        typeof ClipboardItem !== 'undefined' &&
+        navigator.clipboard.write
+      ) {
+        const item = new ClipboardItem({
+          'text/html': new Blob(
+            [html],
+            { type: 'text/html' }
+          ),
+          'text/plain': new Blob(
+            [textoSimples],
+            { type: 'text/plain' }
+          )
+        });
+
+        await navigator.clipboard.write([item]);
+        return;
+      }
+
+      const container = document.createElement('div');
+
+      container.style.position = 'fixed';
+      container.style.left = '-99999px';
+      container.style.top = '0';
+      container.innerHTML = html;
+
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+      range.selectNodeContents(container);
+
+      const selecao = window.getSelection();
+      selecao.removeAllRanges();
+      selecao.addRange(range);
+
+      const copiado = document.execCommand('copy');
+
+      selecao.removeAllRanges();
+      container.remove();
+
+      if (!copiado) {
+        throw new Error(
+          'O navegador não permitiu copiar o conteúdo automaticamente.'
+        );
+      }
+    }
+
+    async function copiarSecaoParaOutlook(secao) {
+      const botao = document.getElementById(`btnCopiarSecao${secao}`);
+
+      try {
+        if (botao) {
+          botao.disabled = true;
+          botao.textContent = 'COPIANDO...';
+        }
+
+        statusOutlook(
+          `Preparando a Seção ${secao} para copiar...`
+        );
+
+        const previa = document.getElementById('previaBoletim');
+
+        if (!previa || !previa.innerHTML.trim()) {
+          gerarPreviaBoletim();
+        }
+
+        const html = montarHtmlSecaoOutlookParaCopia(secao);
+        await gravarHtmlNaAreaTransferencia(html);
+
+        if (secao === 1) {
+          statusOutlook(
+            'Seção 1 copiada com o cabeçalho do boletim. Cole no Outlook com Ctrl+V. Depois copie as Seções 2 e 3.'
+          );
+        } else {
+          statusOutlook(
+            `Seção ${secao} copiada. Posicione o cursor abaixo da seção anterior no Outlook e pressione Ctrl+V.`
+          );
+        }
+      } catch (erro) {
+        console.error(
+          `Erro ao copiar a Seção ${secao} para o Outlook:`,
+          erro
+        );
+
+        statusOutlook(
+          erro.message ||
+          `Não foi possível copiar a Seção ${secao} para o Outlook.`,
+          true
+        );
+      } finally {
+        if (botao) {
+          botao.disabled = false;
+          botao.textContent = `COPIAR SEÇÃO ${secao}`;
+        }
+      }
+    }
+
     async function copiarBoletimParaOutlook() {
       const botao = document.getElementById('btnCopiarOutlook');
 
@@ -4083,76 +4413,20 @@
         }
 
         statusOutlook(
-          'Preparando o boletim formatado para copiar...'
+          'Preparando o boletim completo para copiar...'
         );
 
         const previa = document.getElementById('previaBoletim');
 
-        if (
-          !previa ||
-          !previa.innerHTML.trim()
-        ) {
+        if (!previa || !previa.innerHTML.trim()) {
           gerarPreviaBoletim();
         }
 
         const html = montarHtmlOutlookParaCopia();
-
-        const areaTemporaria = document.createElement('div');
-        areaTemporaria.innerHTML = html;
-
-        const textoSimples =
-          areaTemporaria.innerText ||
-          areaTemporaria.textContent ||
-          '';
-
-        if (
-          navigator.clipboard &&
-          typeof ClipboardItem !== 'undefined' &&
-          navigator.clipboard.write
-        ) {
-          const item = new ClipboardItem({
-            'text/html': new Blob(
-              [html],
-              { type: 'text/html' }
-            ),
-            'text/plain': new Blob(
-              [textoSimples],
-              { type: 'text/plain' }
-            )
-          });
-
-          await navigator.clipboard.write([item]);
-        } else {
-          const container = document.createElement('div');
-
-          container.style.position = 'fixed';
-          container.style.left = '-99999px';
-          container.style.top = '0';
-          container.innerHTML = html;
-
-          document.body.appendChild(container);
-
-          const range = document.createRange();
-          range.selectNodeContents(container);
-
-          const selecao = window.getSelection();
-          selecao.removeAllRanges();
-          selecao.addRange(range);
-
-          const copiado = document.execCommand('copy');
-
-          selecao.removeAllRanges();
-          container.remove();
-
-          if (!copiado) {
-            throw new Error(
-              'O navegador não permitiu copiar o conteúdo automaticamente.'
-            );
-          }
-        }
+        await gravarHtmlNaAreaTransferencia(html);
 
         statusOutlook(
-          'Boletim copiado. Abra um novo e-mail no Outlook e pressione Ctrl+V.'
+          'Boletim completo copiado. Abra um novo e-mail no Outlook e pressione Ctrl+V.'
         );
       } catch (erro) {
         console.error(
@@ -4169,7 +4443,7 @@
         if (botao) {
           botao.disabled = false;
           botao.textContent =
-            'COPIAR BOLETIM PARA O OUTLOOK';
+            'COPIAR BOLETIM COMPLETO';
         }
       }
     }
