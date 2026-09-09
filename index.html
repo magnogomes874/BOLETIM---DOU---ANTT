@@ -1754,7 +1754,7 @@
       const n = normalizarRelevancia(texto);
 
       return (
-        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(n) ||
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(n) ||
         /\bANTT\b/.test(n) ||
         /GOV\.BR\/ANTT/.test(n) ||
         /@ANTT\.GOV\.BR/.test(n)
@@ -1855,42 +1855,55 @@
         );
 
       /*
+        Versão linear usada apenas nas regras em que o PDF pode quebrar
+        o nome da Agência entre linhas.
+      */
+      const textoLinear =
+        texto
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      /*
         EXCEÇÃO CONTROLADA - SEÇÃO 2
 
-        Alguns atos de pessoal são publicados por outro órgão, especialmente
-        pelo MGI, mas tratam diretamente de servidor da ANTT ou de exercício,
-        cessão, movimentação, requisição ou redistribuição envolvendo a Agência.
+        Inclui atos de pessoal publicados por outro órgão quando o próprio
+        ato trata diretamente de exercício, cessão, movimentação, requisição,
+        redistribuição ou lotação de servidor envolvendo a ANTT.
 
-        A exceção é restrita a:
-        1) Seção 2;
-        2) ato de pessoal;
-        3) menção expressa à Agência Nacional de Transportes Terrestres;
-        4) relação funcional direta com a ANTT.
+        Exemplo:
+        PORTARIA DE PESSOAL DICAT/SE/MGI Nº 10.583...
+        "Efetivar o exercício do servidor ... na Agência Nacional de
+        Transportes Terrestres".
       */
+      const tituloEhAtoPessoal =
+        /^PORTARIA DE PESSOAL\b/.test(titulo) ||
+        /^PORTARIA\b/.test(titulo);
+
+      const mencaoExpressaANTTNoTexto =
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+        /\bANTT\b/.test(textoLinear);
+
+      const relacaoFuncionalComANTT =
+        /\bEFETIVAR(?:\s+O)?\s+EXERCICIO\b/.test(textoLinear) ||
+        /\bEXERCICIO\b/.test(textoLinear) ||
+        /\bCESSAO\b/.test(textoLinear) ||
+        /\bCEDER\b/.test(textoLinear) ||
+        /\bCEDIDO\b/.test(textoLinear) ||
+        /\bMOVIMENTACAO\b/.test(textoLinear) ||
+        /\bMOVIMENTAR\b/.test(textoLinear) ||
+        /\bREQUISICAO\b/.test(textoLinear) ||
+        /\bREQUISITAR\b/.test(textoLinear) ||
+        /\bREDISTRIBUICAO\b/.test(textoLinear) ||
+        /\bREDISTRIBUIR\b/.test(textoLinear) ||
+        /\bLOTACAO\b/.test(textoLinear) ||
+        /\bSERVIDOR(?:A)?\b.{0,1200}\bAGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES\b/.test(textoLinear) ||
+        /\bAGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES\b.{0,1200}\bSERVIDOR(?:A)?\b/.test(textoLinear);
+
       const ehAtoPessoalExternoRelacionadoANTT =
         String(secao) === '2' &&
-        (
-          /^PORTARIA DE PESSOAL\b/.test(titulo) ||
-          /^PORTARIA\b/.test(titulo)
-        ) &&
-        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) &&
-        (
-          /\bEFETIVAR(?: O)? EXERCICIO\b/.test(texto) ||
-          /\bEXERCICIO\b/.test(texto) ||
-          /\bCESSAO\b/.test(texto) ||
-          /\bCEDER\b/.test(texto) ||
-          /\bCEDIDO\b/.test(texto) ||
-          /\bMOVIMENTACAO\b/.test(texto) ||
-          /\bMOVIMENTAR\b/.test(texto) ||
-          /\bREQUISICAO\b/.test(texto) ||
-          /\bREQUISITAR\b/.test(texto) ||
-          /\bREDISTRIBUICAO\b/.test(texto) ||
-          /\bREDISTRIBUIR\b/.test(texto) ||
-          /\bLOTACAO\b/.test(texto) ||
-          /\bALTERAR(?: O)? EXERCICIO\b/.test(texto) ||
-          /\bSERVIDOR\b.{0,700}\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b/.test(texto) ||
-          /\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b.{0,700}\bSERVIDOR\b/.test(texto)
-        );
+        tituloEhAtoPessoal &&
+        mencaoExpressaANTTNoTexto &&
+        relacaoFuncionalComANTT;
 
       if (
         ehAtoPessoalExternoRelacionadoANTT
