@@ -1917,6 +1917,37 @@
         ) {
           return true;
         }
+
+        /*
+          RETIFICAÇÃO da Seção 1 pode não repetir "ANTT" no próprio texto
+          e pode aparecer depois de uma longa sequência de atos da mesma
+          Superintendência.
+
+          Nesses casos, mantemos a publicação quando ela retifica
+          explicitamente um ato com sigla institucional própria da ANTT,
+          como DECISÃO SUROD, SUROC, SUPAS, SUFER etc., ou um ato
+          identificado expressamente como ANTT.
+        */
+        if (
+          titulo === 'RETIFICACAO'
+        ) {
+          const referenciaAtoANTT = [
+            /\bDECISAO\s+(?:SUROD|SUROC|SUPAS|SUFER|SUESP|SUDEG|SUSPI)\b/,
+            /\bPORTARIA\s+(?:SUROD|SUROC|SUPAS|SUFER|SUESP|SUDEG|SUSPI|DG)\b/,
+            /\bDELIBERACAO\s+ANTT\b/,
+            /\bRESOLUCAO\s+ANTT\b/,
+            /\bINSTRUCAO NORMATIVA\s+ANTT\b/
+          ];
+
+          if (
+            referenciaAtoANTT.some(
+              regex =>
+                regex.test(texto)
+            )
+          ) {
+            return true;
+          }
+        }
       }
 
       const autoriaANTT = [
