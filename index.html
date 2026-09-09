@@ -1849,10 +1849,62 @@
       const titulo =
         normalizarRelevancia(cabecalho);
 
+      const texto =
+        normalizarRelevancia(
+          `${cabecalho}\n${corpo}\n${conteudo}`
+        );
+
+      /*
+        EXCEÇÃO CONTROLADA - SEÇÃO 2
+
+        Alguns atos de pessoal são publicados por outro órgão, especialmente
+        pelo MGI, mas tratam diretamente de servidor da ANTT ou de exercício,
+        cessão, movimentação, requisição ou redistribuição envolvendo a Agência.
+
+        A exceção é restrita a:
+        1) Seção 2;
+        2) ato de pessoal;
+        3) menção expressa à Agência Nacional de Transportes Terrestres;
+        4) relação funcional direta com a ANTT.
+      */
+      const ehAtoPessoalExternoRelacionadoANTT =
+        String(secao) === '2' &&
+        (
+          /^PORTARIA DE PESSOAL\b/.test(titulo) ||
+          /^PORTARIA\b/.test(titulo)
+        ) &&
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) &&
+        (
+          /\bEFETIVAR(?: O)? EXERCICIO\b/.test(texto) ||
+          /\bEXERCICIO\b/.test(texto) ||
+          /\bCESSAO\b/.test(texto) ||
+          /\bCEDER\b/.test(texto) ||
+          /\bCEDIDO\b/.test(texto) ||
+          /\bMOVIMENTACAO\b/.test(texto) ||
+          /\bMOVIMENTAR\b/.test(texto) ||
+          /\bREQUISICAO\b/.test(texto) ||
+          /\bREQUISITAR\b/.test(texto) ||
+          /\bREDISTRIBUICAO\b/.test(texto) ||
+          /\bREDISTRIBUIR\b/.test(texto) ||
+          /\bLOTACAO\b/.test(texto) ||
+          /\bALTERAR(?: O)? EXERCICIO\b/.test(texto) ||
+          /\bSERVIDOR\b.{0,700}\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b/.test(texto) ||
+          /\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b.{0,700}\bSERVIDOR\b/.test(texto)
+        );
+
+      if (
+        ehAtoPessoalExternoRelacionadoANTT
+      ) {
+        return true;
+      }
+
       /*
         Proteção explícita contra atos de outros órgãos.
-        Siglas ministeriais no próprio título prevalecem sobre qualquer
-        contexto encontrado para trás.
+
+        Fora da exceção controlada acima, siglas ministeriais no próprio
+        título continuam prevalecendo para impedir falsos positivos como
+        Portarias do MTur, MGI, MEC, MTE etc. que não tratem diretamente
+        da ANTT.
       */
       const siglasExternasTitulo = [
         /\/MTUR\b/,
@@ -1877,11 +1929,6 @@
       ) {
         return false;
       }
-
-      const texto =
-        normalizarRelevancia(
-          `${cabecalho}\n${corpo}\n${conteudo}`
-        );
 
       if (
         contextoANTT === true
