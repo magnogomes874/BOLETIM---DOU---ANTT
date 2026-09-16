@@ -2765,7 +2765,21 @@
             anttDireto,
           classificacao,
           relevancia,
-          motivo
+          motivo,
+
+          /*
+            O extrator normal pode encerrar um ato externo ao encontrar
+            outro nome institucional dentro do próprio corpo/anexo.
+            Como a análise externa já usa o trecho original até o próximo
+            ato, preservamos esse mesmo trecho para montar o boletim.
+          */
+          conteudo_externo_completo:
+            (
+              classificacao === 'OUTRO_ORGAO_CITA_ANTT' &&
+              relevancia === 'RELEVANTE'
+            )
+              ? String(textoOriginalParaAnalise || '')
+              : ''
         };
 
         if (
@@ -3804,6 +3818,79 @@
 
 
 
+    function prepararPublicacaoExternaCompletaParaBoletim(item) {
+      if (
+        item?.classificacao !== 'OUTRO_ORGAO_CITA_ANTT' ||
+        !String(item?.conteudo_externo_completo || '').trim()
+      ) {
+        return item;
+      }
+
+      const textoOriginal =
+        limparTexto(
+          limparRuidoDOU(
+            String(item.conteudo_externo_completo || '')
+          )
+        );
+
+      if (!textoOriginal) {
+        return item;
+      }
+
+      const cabecalho =
+        String(
+          item.cabecalho ||
+          item.cabecalho_detectado ||
+          ''
+        ).trim();
+
+      let corpoCompleto = textoOriginal;
+
+      /*
+        Retira apenas o cabeçalho do ato do começo do conteúdo.
+        Todo o restante — inclusive anexos, composição, objeto e
+        referências à ANTT — permanece no corpo.
+      */
+      if (cabecalho) {
+        const linhas = textoOriginal.split('\n');
+        const alvo = normalizarExtracao(cabecalho).trim();
+
+        let indice = -1;
+
+        for (let i = 0; i < Math.min(linhas.length, 30); i++) {
+          const atual =
+            normalizarExtracao(
+              linhas[i]
+            ).trim();
+
+          if (
+            atual === alvo ||
+            atual.includes(alvo) ||
+            alvo.includes(atual)
+          ) {
+            indice = i;
+            break;
+          }
+        }
+
+        if (indice >= 0) {
+          corpoCompleto =
+            linhas
+              .slice(indice + 1)
+              .join('\n')
+              .trim();
+        }
+      }
+
+      return {
+        ...item,
+        corpo: corpoCompleto,
+        conteudo: textoOriginal,
+        tamanho_conteudo: textoOriginal.length
+      };
+    }
+
+
     function obterPublicacoesParaBoletim() {
       const fonte =
         window.contextosCorrigidosDOU &&
@@ -3824,9 +3911,9 @@
         eliminados na etapa classificarRelevanciaPublicacoes.
       */
       return {
-        1: [...(fonte?.[1] || [])],
-        2: [...(fonte?.[2] || [])],
-        3: [...(fonte?.[3] || [])]
+        1: [...(fonte?.[1] || [])].map(prepararPublicacaoExternaCompletaParaBoletim),
+        2: [...(fonte?.[2] || [])].map(prepararPublicacaoExternaCompletaParaBoletim),
+        3: [...(fonte?.[3] || [])].map(prepararPublicacaoExternaCompletaParaBoletim)
       };
     }
 
