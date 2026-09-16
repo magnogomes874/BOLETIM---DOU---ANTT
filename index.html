@@ -1322,6 +1322,44 @@
 
       const linhas = trecho.split('\n');
 
+      /*
+        Uma linha institucional no MEIO do corpo não basta para encerrar
+        uma publicação.
+
+        Exemplo real da Seção 2:
+        "Agência Nacional de Transportes Terrestres - ANTT:"
+        "Titular: Fernando Carlos Psarski Cabral..."
+
+        Isso é composição do anexo da Portaria SENATRAN nº 756/2026,
+        e não início de um novo bloco da ANTT.
+
+        Para considerar mudança de órgão, exigimos que depois do cabeçalho
+        institucional apareça outro cabeçalho institucional ou um novo ato.
+      */
+      const proximaLinhaUtil = indice => {
+        for (let j = indice + 1; j < linhas.length; j++) {
+          const candidata = linhas[j].trim();
+
+          if (!candidata) {
+            continue;
+          }
+
+          if (
+            /^Documento assinado digitalmente/i.test(candidata) ||
+            /^Este documento pode ser verificado/i.test(candidata) ||
+            /^https?:\/\//i.test(candidata) ||
+            /^Seção\s*[123]\b/i.test(candidata) ||
+            /^\d{1,4}$/.test(candidata)
+          ) {
+            continue;
+          }
+
+          return candidata;
+        }
+
+        return '';
+      };
+
       for (let i = 0; i < linhas.length; i++) {
         const linhaOriginal = linhas[i];
         const linha = linhaOriginal.trim();
@@ -1337,7 +1375,33 @@
           continue;
         }
 
-        if (ehCabecalhoInstitucionalForte(linha)) {
+        if (!ehCabecalhoInstitucionalForte(linha)) {
+          continue;
+        }
+
+        const seguinte = proximaLinhaUtil(i);
+
+        if (!seguinte) {
+          continue;
+        }
+
+        /*
+          "Titular:", "Suplente:", "Contratante:", itens de anexo etc.
+          provam que a linha institucional pertence ao corpo do ato.
+        */
+        const seguinteEhCorpo =
+          /^(?:TITULAR|SUPLENTE|REPRESENTANTE|CONTRATANTE|CONTRATADO|OBJETO|PROCESSO|N[ºO]\s*PROCESSO|ART\.?|I\b|II\b|III\b|IV\b|V\b|VI\b|VII\b|VIII\b|IX\b|X\b)\s*[:\-–—]/i.test(
+            normalizarExtracao(seguinte)
+          );
+
+        if (seguinteEhCorpo) {
+          continue;
+        }
+
+        if (
+          ehCabecalhoPublicacao(seguinte) ||
+          ehLinhaInstitucional(seguinte)
+        ) {
           return posicaoLinha;
         }
       }
@@ -2101,7 +2165,7 @@
           /\bUASG\s+393001\b/.test(textoLinear) ||
           /\bPROCESSO\s*:?\s*50500\./.test(textoLinear) ||
           /\bN[ºO]?\s*PROCESSO\s*:?\s*50500\./.test(textoLinear) ||
-          /CONTRATANTE\s*:?\s*AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES/.test(textoLinear) ||
+          /CONTRATANTE\s*:?\s*AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES(?:\s+TERRESTRES|\s+T\s*E\s*R\s*R\s*E\s*S\s*T\s*R\s*E\s*S)?/.test(textoLinear) ||
           /SEDE\s+DA\s+ANTT\b/.test(textoLinear);
 
         if (
@@ -2163,16 +2227,11 @@
           return true;
         }
 
-        if (
-          mencionaANTT(texto) &&
-          (
-            /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
-            /DIRETOR-GERAL DA ANTT/.test(textoLinear) ||
-            /DIRETOR GERAL DA ANTT/.test(textoLinear)
-          )
-        ) {
-          return true;
-        }
+        /*
+          Não basta mencionar a ANTT para transformar um ato externo
+          em ato direto da Agência. Casos externos relevantes são
+          avaliados abaixo por identificarMencaoMaterialExternaANTT().
+        */
       }
 
       return false;
@@ -2346,16 +2405,12 @@
       }
 
       /*
-        Se uma unidade institucional própria da ANTT foi encontrada no
-        caminho para trás e nenhuma fronteira externa apareceu depois
-        dela, a publicação continua pertencendo ao bloco da Agência.
-        Isso é essencial na Seção 3, onde vários extratos sucessivos
-        afastam o cabeçalho "AGÊNCIA NACIONAL..." por milhares de caracteres.
+        Não promovemos uma publicação apenas porque uma unidade da ANTT
+        apareceu longe para trás. Sem o cabeçalho da Agência, a autoria
+        será confirmada pelos sinais do próprio ato (UASG, processo,
+        contratante, sigla/unidade etc.). Isso evita herança indevida
+        de contexto e reduz falsos positivos.
       */
-      if (encontrouUnidadeANTT) {
-        return true;
-      }
-
       return false;
     }
 
@@ -2383,31 +2438,35 @@
 
       if (String(secao) === '2') {
         /*
-          Atos de outros órgãos entram quando a ANTT participa materialmente
-          do ato: composição de comitê/grupo/conselho, designação de membro,
-          titular/suplente, exercício, cessão, movimentação etc.
-        */
-        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*-\s*ANTT)?/.test(textoLinear);
-        const participacaoInstitucional = [
-          /\bTITULAR\b/,
-          /\bSUPLENTE\b/,
-          /\bMEMBRO(?:S)?\b/,
-          /\bCOMITE\b/,
-          /\bGRUPO DE TRABALHO\b/,
-          /\bCONSELHO\b/,
-          /\bCOMISSAO\b/,
-          /\bREPRESENTANTE(?:S)?\b/,
-          /\bDESIGNAR\b/,
-          /\bEXERCICIO\b/,
-          /\bCESSAO\b/,
-          /\bCEDER\b/,
-          /\bMOVIMENTACAO\b/,
-          /\bREQUISICAO\b/,
-          /\bREDISTRIBUICAO\b/,
-          /\bLOTACAO\b/
-        ].some(regex => regex.test(textoLinear));
+          Ato externo relevante somente quando existe vínculo funcional
+          ou participação institucional EXPRESSA da ANTT.
 
-        return nomeCompletoANTT && participacaoInstitucional;
+          Caso validado:
+          PORTARIA SENATRAN Nº 756/2026
+          "Agência Nacional de Transportes Terrestres - ANTT:
+           Titular: Fernando Carlos Psarski Cabral..."
+        */
+        const nomeCompletoANTT =
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?\s*:/.test(textoLinear) ||
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?/.test(textoLinear);
+
+        const composicaoANTT =
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?\s*:\s*(?:TITULAR|SUPLENTE|REPRESENTANTE)/.test(textoLinear);
+
+        const vinculoFuncional =
+          (
+            /\bSERVIDOR(?:A)?\b/.test(textoLinear) ||
+            /\bEXERCICIO\b/.test(textoLinear) ||
+            /\bCESSAO\b/.test(textoLinear) ||
+            /\bCEDER\b/.test(textoLinear) ||
+            /\bMOVIMENTACAO\b/.test(textoLinear) ||
+            /\bREQUISICAO\b/.test(textoLinear) ||
+            /\bREDISTRIBUICAO\b/.test(textoLinear) ||
+            /\bLOTACAO\b/.test(textoLinear)
+          ) &&
+          nomeCompletoANTT;
+
+        return composicaoANTT || vinculoFuncional;
       }
 
       if (String(secao) === '3') {
@@ -2416,7 +2475,7 @@
           Agência é material (contrato/concessão/edital/anuência/aprovação),
           e não uma simples citação normativa.
         */
-        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(textoLinear);
+        const nomeCompletoANTT = /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(textoLinear);
         const vinculoMaterial = [
           /\bCONTRATO DE CONCESSAO\b/,
           /\bCONTRATO\b.{0,500}\bANTT\b/,
