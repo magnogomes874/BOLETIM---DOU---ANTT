@@ -1752,12 +1752,14 @@
 
     function mencionaANTT(texto) {
       const n = normalizarRelevancia(texto);
+      const linear = n.replace(/\s+/g, ' ').trim();
 
       return (
-        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(n) ||
-        /\bANTT\b/.test(n) ||
-        /GOV\.BR\/ANTT/.test(n) ||
-        /@ANTT\.GOV\.BR/.test(n)
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(linear) ||
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+T\s*E\s*R\s*R\s*E\s*S\s*T\s*R\s*E\s*S/.test(linear) ||
+        /\bANTT\b/.test(linear) ||
+        /GOV\.BR\/ANTT/.test(linear) ||
+        /@ANTT\.GOV\.BR/.test(linear)
       );
     }
 
@@ -1855,6 +1857,11 @@
           `${cabecalho}\n${corpo}\n${conteudo}`
         );
 
+      const textoLinear =
+        texto
+          .replace(/\s+/g, ' ')
+          .trim();
+
       /*
         EXCEÇÃO CONTROLADA - SEÇÃO 2
 
@@ -1874,7 +1881,7 @@
           /^PORTARIA DE PESSOAL\b/.test(titulo) ||
           /^PORTARIA\b/.test(titulo)
         ) &&
-        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) &&
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) &&
         (
           /\bEFETIVAR(?: O)? EXERCICIO\b/.test(texto) ||
           /\bEXERCICIO\b/.test(texto) ||
@@ -1896,6 +1903,35 @@
       if (
         ehAtoPessoalExternoRelacionadoANTT
       ) {
+        return true;
+      }
+
+      /*
+        SEÇÃO 2 - ATO EXTERNO COM PARTICIPAÇÃO INSTITUCIONAL DA ANTT
+
+        Inclui atos de outros órgãos quando a própria publicação designa,
+        relaciona ou inclui expressamente a ANTT em comitê, comissão,
+        conselho, grupo de trabalho ou composição institucional.
+
+        Exemplo validado no DOU de 16/09/2026:
+        PORTARIA SENATRAN Nº 756/2026.
+      */
+      const ehParticipacaoInstitucionalANTTSecao2 =
+        String(secao) === '2' &&
+        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) &&
+        (
+          /\bCOMITE\b/.test(textoLinear) ||
+          /\bCOMISSAO\b/.test(textoLinear) ||
+          /\bCONSELHO\b/.test(textoLinear) ||
+          /\bGRUPO DE TRABALHO\b/.test(textoLinear) ||
+          /\bMEMBRO(?:S)?\b/.test(textoLinear) ||
+          /\bTITULAR\b/.test(textoLinear) ||
+          /\bSUPLENTE\b/.test(textoLinear) ||
+          /\bREPRESENTANTE(?:S)?\b/.test(textoLinear) ||
+          /\bDESIGNAR\b/.test(textoLinear)
+        );
+
+      if (ehParticipacaoInstitucionalANTTSecao2) {
         return true;
       }
 
@@ -2056,6 +2092,25 @@
           return true;
         }
 
+        /*
+          Sinais estruturais fortes de publicação administrativa da ANTT.
+          O DOU pode imprimir "TERRESTRES" com letras separadas, por isso
+          também usamos UASG/processo como confirmação.
+        */
+        const sinalAdministrativoANTTSecao3 =
+          /\bUASG\s+393001\b/.test(textoLinear) ||
+          /\bPROCESSO\s*:?\s*50500\./.test(textoLinear) ||
+          /\bN[ºO]?\s*PROCESSO\s*:?\s*50500\./.test(textoLinear) ||
+          /CONTRATANTE\s*:?\s*AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES/.test(textoLinear) ||
+          /SEDE\s+DA\s+ANTT\b/.test(textoLinear);
+
+        if (
+          ehTituloSecao3(titulo) &&
+          sinalAdministrativoANTTSecao3
+        ) {
+          return true;
+        }
+
         const camposANTT = [
           /CONTRATANTE\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
           /CONCEDENTE\s*:?\s*(?:AGENCIA NACIONAL DE TRANSPORTES TERRESTRES|ANTT)/,
@@ -2111,9 +2166,9 @@
         if (
           mencionaANTT(texto) &&
           (
-            /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) ||
-            /DIRETOR-GERAL DA ANTT/.test(texto) ||
-            /DIRETOR GERAL DA ANTT/.test(texto)
+            /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /DIRETOR-GERAL DA ANTT/.test(textoLinear) ||
+            /DIRETOR GERAL DA ANTT/.test(textoLinear)
           )
         ) {
           return true;
@@ -2290,6 +2345,17 @@
 
       }
 
+      /*
+        Se uma unidade institucional própria da ANTT foi encontrada no
+        caminho para trás e nenhuma fronteira externa apareceu depois
+        dela, a publicação continua pertencendo ao bloco da Agência.
+        Isso é essencial na Seção 3, onde vários extratos sucessivos
+        afastam o cabeçalho "AGÊNCIA NACIONAL..." por milhares de caracteres.
+      */
+      if (encontrouUnidadeANTT) {
+        return true;
+      }
+
       return false;
     }
 
@@ -2297,8 +2363,9 @@
     function identificarMencaoMaterialExternaANTT(secao, cabecalho, corpo, conteudo) {
       const titulo = normalizarRelevancia(cabecalho);
       const texto = normalizarRelevancia(`${cabecalho}\n${corpo}\n${conteudo}`);
+      const textoLinear = texto.replace(/\s+/g, ' ').trim();
 
-      if (!mencionaANTT(texto)) {
+      if (!mencionaANTT(textoLinear)) {
         return false;
       }
 
@@ -2307,8 +2374,8 @@
         de fora: edital da PRF dizendo apenas "Resoluções da ANTT".
       */
       const apenasReferenciaNormativa =
-        /RESOLUCOES? DA ANTT/.test(texto) &&
-        !/AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto);
+        /RESOLUCOES? DA ANTT/.test(textoLinear) &&
+        !/AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(textoLinear);
 
       if (apenasReferenciaNormativa) {
         return false;
@@ -2320,7 +2387,7 @@
           do ato: composição de comitê/grupo/conselho, designação de membro,
           titular/suplente, exercício, cessão, movimentação etc.
         */
-        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*-\s*ANTT)?/.test(texto);
+        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*-\s*ANTT)?/.test(textoLinear);
         const participacaoInstitucional = [
           /\bTITULAR\b/,
           /\bSUPLENTE\b/,
@@ -2338,7 +2405,7 @@
           /\bREQUISICAO\b/,
           /\bREDISTRIBUICAO\b/,
           /\bLOTACAO\b/
-        ].some(regex => regex.test(texto));
+        ].some(regex => regex.test(textoLinear));
 
         return nomeCompletoANTT && participacaoInstitucional;
       }
@@ -2349,7 +2416,7 @@
           Agência é material (contrato/concessão/edital/anuência/aprovação),
           e não uma simples citação normativa.
         */
-        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(texto);
+        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(textoLinear);
         const vinculoMaterial = [
           /\bCONTRATO DE CONCESSAO\b/,
           /\bCONTRATO\b.{0,500}\bANTT\b/,
@@ -2361,7 +2428,7 @@
           /\bCONVENIO\b.{0,500}\bANTT\b/,
           /\bACORDO DE COOPERACAO\b/,
           /\bRESPONSABILIDADE\b.{0,500}\bANTT\b/
-        ].some(regex => regex.test(texto));
+        ].some(regex => regex.test(textoLinear));
 
         return nomeCompletoANTT && vinculoMaterial;
       }
