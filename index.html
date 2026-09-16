@@ -2438,63 +2438,159 @@
 
       if (String(secao) === '2') {
         /*
-          Ato externo relevante somente quando existe vínculo funcional
-          ou participação institucional EXPRESSA da ANTT.
+          SEÇÃO 2 - ATO EXTERNO RELEVANTE
 
-          Caso validado:
-          PORTARIA SENATRAN Nº 756/2026
-          "Agência Nacional de Transportes Terrestres - ANTT:
-           Titular: Fernando Carlos Psarski Cabral..."
+          Critério preciso:
+          1) participação institucional expressa da ANTT em composição
+             (Titular/Suplente/Representante); OU
+          2) vínculo funcional de servidor com a ANTT.
+
+          Caso de referência:
+          PORTARIA SENATRAN Nº 756/2026.
         */
-        const nomeCompletoANTT =
-          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?\s*:/.test(textoLinear) ||
+        const nomeANTT =
           /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?/.test(textoLinear);
 
-        const composicaoANTT =
-          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?\s*:\s*(?:TITULAR|SUPLENTE|REPRESENTANTE)/.test(textoLinear);
+        if (!nomeANTT) {
+          return false;
+        }
+
+        const composicaoInstitucional =
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*-\s*ANTT)?\s*:?\s*(?:TITULAR|SUPLENTE|REPRESENTANTE)/.test(textoLinear) ||
+          /(?:TITULAR|SUPLENTE|REPRESENTANTE).{0,600}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear);
 
         const vinculoFuncional =
           (
-            /\bSERVIDOR(?:A)?\b/.test(textoLinear) ||
-            /\bEXERCICIO\b/.test(textoLinear) ||
-            /\bCESSAO\b/.test(textoLinear) ||
-            /\bCEDER\b/.test(textoLinear) ||
-            /\bMOVIMENTACAO\b/.test(textoLinear) ||
-            /\bREQUISICAO\b/.test(textoLinear) ||
-            /\bREDISTRIBUICAO\b/.test(textoLinear) ||
-            /\bLOTACAO\b/.test(textoLinear)
-          ) &&
-          nomeCompletoANTT;
+            /\bEFETIVAR(?:\s+O)?\s+EXERCICIO\b/.test(textoLinear) ||
+            /\bEXERCICIO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bCESSAO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bCEDER\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bMOVIMENTACAO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bREQUISICAO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bREDISTRIBUICAO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /\bLOTACAO\b.{0,900}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+            /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES.{0,900}\bSERVIDOR(?:A)?\b/.test(textoLinear)
+          );
 
-        return composicaoANTT || vinculoFuncional;
+        return composicaoInstitucional || vinculoFuncional;
       }
 
       if (String(secao) === '3') {
         /*
-          Na Seção 3, atos externos são relevantes quando o vínculo com a
-          Agência é material (contrato/concessão/edital/anuência/aprovação),
-          e não uma simples citação normativa.
-        */
-        const nomeCompletoANTT = /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(textoLinear);
-        const vinculoMaterial = [
-          /\bCONTRATO DE CONCESSAO\b/,
-          /\bCONTRATO\b.{0,500}\bANTT\b/,
-          /\bEDITAL ANTT\b/,
-          /\bREGULAD[AO]S?\b.{0,500}\bANTT\b/,
-          /\bAPROVAD[AO]S?\b.{0,500}\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b/,
-          /\bAUTORIZAD[AO]S?\b.{0,500}\bANTT\b/,
-          /\bANUENCIA\b.{0,500}\bANTT\b/,
-          /\bCONVENIO\b.{0,500}\bANTT\b/,
-          /\bACORDO DE COOPERACAO\b/,
-          /\bRESPONSABILIDADE\b.{0,500}\bANTT\b/
-        ].some(regex => regex.test(textoLinear));
+          SEÇÃO 3 - ATO EXTERNO RELEVANTE
 
-        return nomeCompletoANTT && vinculoMaterial;
+          Exige nome completo da Agência e relação material com:
+          concessão, edital ANTT, aprovação/autorização da ANTT,
+          contrato regulado pela ANTT ou acordo de cooperação cujo
+          objeto trate diretamente de empreendimento regulado pela ANTT.
+
+          Mera referência a "Resoluções da ANTT" continua excluída.
+        */
+        const nomeANTT =
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(textoLinear);
+
+        if (!nomeANTT) {
+          return false;
+        }
+
+        const meraNorma =
+          /RESOLUCOES?\s+DA\s+ANTT/.test(textoLinear) &&
+          !/EDITAL\s+ANTT\s+N[ºO]?/.test(textoLinear) &&
+          !/CONTRATO\s+DE\s+CONCESSAO/.test(textoLinear) &&
+          !/APROVAD[AO]S?\s+PELA\s+AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear);
+
+        if (meraNorma) {
+          return false;
+        }
+
+        const vinculoMaterial =
+          /EDITAL\s+ANTT\s+N[ºO]?/.test(textoLinear) ||
+          /CONTRATO\s+DE\s+CONCESSAO/.test(textoLinear) ||
+          /APROVAD[AO]S?\s+PELA\s+AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+          /AUTORIZAD[AO]S?\s+PELA\s+AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+          /REGULAD[AO]S?.{0,700}AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
+          /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES.{0,1200}CONTRATO\s+DE\s+CONCESSAO/.test(textoLinear) ||
+          (
+            /ACORDO\s+DE\s+COOPERACAO\s+TECNICA/.test(textoLinear) &&
+            (
+              /EDITAL\s+ANTT\s+N[ºO]?/.test(textoLinear) ||
+              /CONTRATO\s+DE\s+CONCESSAO/.test(textoLinear) ||
+              /APROVAD[AO]S?\s+PELA\s+AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear)
+            )
+          );
+
+        return vinculoMaterial;
       }
 
       return false;
     }
 
+
+
+    function obterTextoOriginalDaPublicacaoParaAnalise(item) {
+      const secao = String(item?.secao || '');
+      const textoOriginal =
+        String(
+          window.textosDOU?.[secao] ||
+          window.textosDOU?.[Number(secao)] ||
+          ''
+        );
+
+      if (!textoOriginal) {
+        return String(
+          item?.conteudo ||
+          `${item?.cabecalho || ''}\n${item?.corpo || ''}`
+        );
+      }
+
+      const inicio = Number(item?.posicao_inicio);
+
+      if (!Number.isFinite(inicio) || inicio < 0) {
+        return String(
+          item?.conteudo ||
+          `${item?.cabecalho || ''}\n${item?.corpo || ''}`
+        );
+      }
+
+      /*
+        O fim para ANÁLISE DE RELEVÂNCIA será o próximo candidato
+        detectado na mesma seção. Não usamos aqui a mudança de órgão,
+        porque nomes de instituições podem aparecer dentro de anexos
+        ou do objeto do próprio ato.
+      */
+      const candidatos =
+        Array.isArray(window.candidatosDOU?.[secao])
+          ? window.candidatosDOU[secao]
+          : (
+              Array.isArray(window.candidatosDOU?.[Number(secao)])
+                ? window.candidatosDOU[Number(secao)]
+                : []
+            );
+
+      const posicoesPosteriores =
+        candidatos
+          .map(c => Number(c?.posicao))
+          .filter(p => Number.isFinite(p) && p > inicio)
+          .sort((a, b) => a - b);
+
+      let fim =
+        posicoesPosteriores.length
+          ? posicoesPosteriores[0]
+          : Math.min(textoOriginal.length, inicio + 30000);
+
+      /*
+        Proteção contra janelas anormalmente grandes.
+        30 mil caracteres são suficientes para anexos extensos sem
+        contaminar a análise com publicações muito distantes.
+      */
+      fim = Math.min(fim, inicio + 30000);
+
+      if (fim <= inicio) {
+        fim = Math.min(textoOriginal.length, inicio + 30000);
+      }
+
+      return textoOriginal.substring(inicio, fim);
+    }
 
     function classificarRelevanciaPublicacoes(
       publicacoes
@@ -2537,10 +2633,32 @@
             item
           );
 
-        const temMencaoANTT =
+        /*
+          Para atos próprios da ANTT, mantemos exatamente a lógica já
+          validada pelo usuário.
+
+          Para atos EXTERNOS, analisamos também o trecho original do PDF
+          até o próximo candidato. Isso resolve os casos em que a menção
+          à ANTT aparece mais adiante em anexo, composição ou objeto.
+        */
+        const textoOriginalParaAnalise =
+          obterTextoOriginalDaPublicacaoParaAnalise(
+            item
+          );
+
+        const temMencaoANTTNoConteudo =
           mencionaANTT(
             conteudo
           );
+
+        const temMencaoANTTNoOriginal =
+          mencionaANTT(
+            textoOriginalParaAnalise
+          );
+
+        const temMencaoANTT =
+          temMencaoANTTNoConteudo ||
+          temMencaoANTTNoOriginal;
 
         const anttDireto =
           identificarANTTDireto(
@@ -2583,12 +2701,16 @@
         else if (
           temMencaoANTT
         ) {
+          /*
+            A análise material externa recebe o texto original completo
+            do candidato. O cabeçalho continua sendo o cabeçalho real.
+          */
           const mencaoMaterialExterna =
             identificarMencaoMaterialExternaANTT(
               secao,
               cabecalho,
-              corpo,
-              conteudo
+              textoOriginalParaAnalise,
+              textoOriginalParaAnalise
             );
 
           classificacao =
