@@ -1754,7 +1754,7 @@
       const n = normalizarRelevancia(texto);
 
       return (
-        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(n) ||
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(n) ||
         /\bANTT\b/.test(n) ||
         /GOV\.BR\/ANTT/.test(n) ||
         /@ANTT\.GOV\.BR/.test(n)
@@ -1795,6 +1795,7 @@
         /\bSUROC\b/,
         /\bSUPAS\b/,
         /\bSUFER\b/,
+        /\bSUFIS\b/,
         /\bSUESP\b/,
         /\bSUDEG\b/,
         /\bSUSPI\b/,
@@ -1855,55 +1856,42 @@
         );
 
       /*
-        Versão linear usada apenas nas regras em que o PDF pode quebrar
-        o nome da Agência entre linhas.
-      */
-      const textoLinear =
-        texto
-          .replace(/\s+/g, ' ')
-          .trim();
-
-      /*
         EXCEÇÃO CONTROLADA - SEÇÃO 2
 
-        Inclui atos de pessoal publicados por outro órgão quando o próprio
-        ato trata diretamente de exercício, cessão, movimentação, requisição,
-        redistribuição ou lotação de servidor envolvendo a ANTT.
+        Alguns atos de pessoal são publicados por outro órgão, especialmente
+        pelo MGI, mas tratam diretamente de servidor da ANTT ou de exercício,
+        cessão, movimentação, requisição ou redistribuição envolvendo a Agência.
 
-        Exemplo:
-        PORTARIA DE PESSOAL DICAT/SE/MGI Nº 10.583...
-        "Efetivar o exercício do servidor ... na Agência Nacional de
-        Transportes Terrestres".
+        A exceção é restrita a:
+        1) Seção 2;
+        2) ato de pessoal;
+        3) menção expressa à Agência Nacional de Transportes Terrestres;
+        4) relação funcional direta com a ANTT.
       */
-      const tituloEhAtoPessoal =
-        /^PORTARIA DE PESSOAL\b/.test(titulo) ||
-        /^PORTARIA\b/.test(titulo);
-
-      const mencaoExpressaANTTNoTexto =
-        /AGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES/.test(textoLinear) ||
-        /\bANTT\b/.test(textoLinear);
-
-      const relacaoFuncionalComANTT =
-        /\bEFETIVAR(?:\s+O)?\s+EXERCICIO\b/.test(textoLinear) ||
-        /\bEXERCICIO\b/.test(textoLinear) ||
-        /\bCESSAO\b/.test(textoLinear) ||
-        /\bCEDER\b/.test(textoLinear) ||
-        /\bCEDIDO\b/.test(textoLinear) ||
-        /\bMOVIMENTACAO\b/.test(textoLinear) ||
-        /\bMOVIMENTAR\b/.test(textoLinear) ||
-        /\bREQUISICAO\b/.test(textoLinear) ||
-        /\bREQUISITAR\b/.test(textoLinear) ||
-        /\bREDISTRIBUICAO\b/.test(textoLinear) ||
-        /\bREDISTRIBUIR\b/.test(textoLinear) ||
-        /\bLOTACAO\b/.test(textoLinear) ||
-        /\bSERVIDOR(?:A)?\b.{0,1200}\bAGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES\b/.test(textoLinear) ||
-        /\bAGENCIA\s+NACIONAL\s+DE\s+TRANSPORTES\s+TERRESTRES\b.{0,1200}\bSERVIDOR(?:A)?\b/.test(textoLinear);
-
       const ehAtoPessoalExternoRelacionadoANTT =
         String(secao) === '2' &&
-        tituloEhAtoPessoal &&
-        mencaoExpressaANTTNoTexto &&
-        relacaoFuncionalComANTT;
+        (
+          /^PORTARIA DE PESSOAL\b/.test(titulo) ||
+          /^PORTARIA\b/.test(titulo)
+        ) &&
+        /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto) &&
+        (
+          /\bEFETIVAR(?: O)? EXERCICIO\b/.test(texto) ||
+          /\bEXERCICIO\b/.test(texto) ||
+          /\bCESSAO\b/.test(texto) ||
+          /\bCEDER\b/.test(texto) ||
+          /\bCEDIDO\b/.test(texto) ||
+          /\bMOVIMENTACAO\b/.test(texto) ||
+          /\bMOVIMENTAR\b/.test(texto) ||
+          /\bREQUISICAO\b/.test(texto) ||
+          /\bREQUISITAR\b/.test(texto) ||
+          /\bREDISTRIBUICAO\b/.test(texto) ||
+          /\bREDISTRIBUIR\b/.test(texto) ||
+          /\bLOTACAO\b/.test(texto) ||
+          /\bALTERAR(?: O)? EXERCICIO\b/.test(texto) ||
+          /\bSERVIDOR\b.{0,700}\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b/.test(texto) ||
+          /\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b.{0,700}\bSERVIDOR\b/.test(texto)
+        );
 
       if (
         ehAtoPessoalExternoRelacionadoANTT
@@ -1961,10 +1949,12 @@
           /^PORTARIA SUROD Nº/,
           /^PORTARIA SUPAS Nº/,
           /^PORTARIA SUFER Nº/,
+          /^PORTARIA SUFIS Nº/,
           /^PORTARIA SUDEG Nº/,
           /^DECISAO SUROD Nº/,
           /^DECISAO SUROC Nº/,
           /^DECISAO SUFER Nº/,
+          /^DECISAO SUFIS Nº/,
           /^DECISAO SUPAS Nº/,
           /^DECISAO SUESP Nº/
         ];
@@ -1992,8 +1982,8 @@
           titulo === 'RETIFICACAO'
         ) {
           const referenciaAtoANTT = [
-            /\bDECISAO\s+(?:SUROD|SUROC|SUPAS|SUFER|SUESP|SUDEG|SUSPI)\b/,
-            /\bPORTARIA\s+(?:SUROD|SUROC|SUPAS|SUFER|SUESP|SUDEG|SUSPI|DG)\b/,
+            /\bDECISAO\s+(?:SUROD|SUROC|SUPAS|SUFER|SUFIS|SUESP|SUDEG|SUSPI)\b/,
+            /\bPORTARIA\s+(?:SUROD|SUROC|SUPAS|SUFER|SUFIS|SUESP|SUDEG|SUSPI|DG)\b/,
             /\bDELIBERACAO\s+ANTT\b/,
             /\bRESOLUCAO\s+ANTT\b/,
             /\bINSTRUCAO NORMATIVA\s+ANTT\b/
@@ -2101,6 +2091,7 @@
           /^PORTARIA SUROC Nº/,
           /^PORTARIA SUPAS Nº/,
           /^PORTARIA SUFER Nº/,
+          /^PORTARIA SUFIS Nº/,
           /^PORTARIA SUDEG Nº/,
           /^PORTARIA SUSPI Nº/,
           /^PORTARIA DE PESSOAL .*ANTT/,
@@ -2184,6 +2175,8 @@
         'SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO DE PASSAGEIROS',
         'SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS',
         'SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO',
+        'SUPERINTENDENCIA DE FISCALIZACAO DE SERVICOS DE TRANSPORTE RODOVIARIO DE CARGAS E PASSAGEIROS',
+        'SUPERINTENDENCIA DE FISCALIZACAO',
         'SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA',
         'SUPERINTENDENCIA DE GOVERNANCA REGULATORIA',
         'SUPERINTENDENCIA DE GOVERNANCA ESTRATEGICA E REGULATORIA',
@@ -2301,6 +2294,82 @@
     }
 
 
+    function identificarMencaoMaterialExternaANTT(secao, cabecalho, corpo, conteudo) {
+      const titulo = normalizarRelevancia(cabecalho);
+      const texto = normalizarRelevancia(`${cabecalho}\n${corpo}\n${conteudo}`);
+
+      if (!mencionaANTT(texto)) {
+        return false;
+      }
+
+      /*
+        Não basta citar uma norma da ANTT. Exemplo clássico que deve ficar
+        de fora: edital da PRF dizendo apenas "Resoluções da ANTT".
+      */
+      const apenasReferenciaNormativa =
+        /RESOLUCOES? DA ANTT/.test(texto) &&
+        !/AGENCIA NACIONAL DE TRANSPORTES TERRESTRES/.test(texto);
+
+      if (apenasReferenciaNormativa) {
+        return false;
+      }
+
+      if (String(secao) === '2') {
+        /*
+          Atos de outros órgãos entram quando a ANTT participa materialmente
+          do ato: composição de comitê/grupo/conselho, designação de membro,
+          titular/suplente, exercício, cessão, movimentação etc.
+        */
+        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*-\s*ANTT)?/.test(texto);
+        const participacaoInstitucional = [
+          /\bTITULAR\b/,
+          /\bSUPLENTE\b/,
+          /\bMEMBRO(?:S)?\b/,
+          /\bCOMITE\b/,
+          /\bGRUPO DE TRABALHO\b/,
+          /\bCONSELHO\b/,
+          /\bCOMISSAO\b/,
+          /\bREPRESENTANTE(?:S)?\b/,
+          /\bDESIGNAR\b/,
+          /\bEXERCICIO\b/,
+          /\bCESSAO\b/,
+          /\bCEDER\b/,
+          /\bMOVIMENTACAO\b/,
+          /\bREQUISICAO\b/,
+          /\bREDISTRIBUICAO\b/,
+          /\bLOTACAO\b/
+        ].some(regex => regex.test(texto));
+
+        return nomeCompletoANTT && participacaoInstitucional;
+      }
+
+      if (String(secao) === '3') {
+        /*
+          Na Seção 3, atos externos são relevantes quando o vínculo com a
+          Agência é material (contrato/concessão/edital/anuência/aprovação),
+          e não uma simples citação normativa.
+        */
+        const nomeCompletoANTT = /AGENCIA NACIONAL DE TRANSPORTES TERRESTRES(?:\s*\(ANTT\)|\s*-\s*ANTT)?/.test(texto);
+        const vinculoMaterial = [
+          /\bCONTRATO DE CONCESSAO\b/,
+          /\bCONTRATO\b.{0,500}\bANTT\b/,
+          /\bEDITAL ANTT\b/,
+          /\bREGULAD[AO]S?\b.{0,500}\bANTT\b/,
+          /\bAPROVAD[AO]S?\b.{0,500}\bAGENCIA NACIONAL DE TRANSPORTES TERRESTRES\b/,
+          /\bAUTORIZAD[AO]S?\b.{0,500}\bANTT\b/,
+          /\bANUENCIA\b.{0,500}\bANTT\b/,
+          /\bCONVENIO\b.{0,500}\bANTT\b/,
+          /\bACORDO DE COOPERACAO\b/,
+          /\bRESPONSABILIDADE\b.{0,500}\bANTT\b/
+        ].some(regex => regex.test(texto));
+
+        return nomeCompletoANTT && vinculoMaterial;
+      }
+
+      return false;
+    }
+
+
     function classificarRelevanciaPublicacoes(
       publicacoes
     ) {
@@ -2388,21 +2457,28 @@
         else if (
           temMencaoANTT
         ) {
-          /*
-            Menção normativa isolada não torna o ato relevante.
-            Ex.: Polícia Rodoviária Federal citando "Resoluções da ANTT".
-            A publicação só entra quando foi identificada antes como ANTT_DIRETO.
-          */
+          const mencaoMaterialExterna =
+            identificarMencaoMaterialExternaANTT(
+              secao,
+              cabecalho,
+              corpo,
+              conteudo
+            );
+
           classificacao =
             'OUTRO_ORGAO_CITA_ANTT';
 
-          relevancia =
-            'DESCARTAR';
-
-          motivo =
-            contextoOrgao
+          if (mencaoMaterialExterna) {
+            relevancia = 'RELEVANTE';
+            motivo = contextoOrgao
+              ? `Publicação de outro órgão com vínculo material expresso com a ANTT. Contexto: ${contextoOrgao}`
+              : 'Publicação de outro órgão com vínculo material expresso com a ANTT.';
+          } else {
+            relevancia = 'DESCARTAR';
+            motivo = contextoOrgao
               ? `Publicação de outro órgão com mera menção à ANTT. Contexto: ${contextoOrgao}`
               : 'Publicação de outro órgão com mera menção à ANTT.';
+          }
         }
 
         else {
@@ -3546,6 +3622,10 @@
           nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
         },
         {
+          regex: /\bSUFIS\b/,
+          nome: 'SUPERINTENDÊNCIA DE FISCALIZAÇÃO DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO DE CARGAS E PASSAGEIROS'
+        },
+        {
           regex: /\bSUDEG\b/,
           nome: 'SUPERINTENDÊNCIA DE GESTÃO ADMINISTRATIVA'
         }
@@ -3578,6 +3658,10 @@
         {
           regex: /SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO/,
           nome: 'SUPERINTENDÊNCIA DE TRANSPORTE FERROVIÁRIO'
+        },
+        {
+          regex: /SUPERINTENDENCIA DE FISCALIZACAO DE SERVICOS DE TRANSPORTE RODOVIARIO DE CARGAS E PASSAGEIROS|SUPERINTENDENCIA DE FISCALIZACAO/,
+          nome: 'SUPERINTENDÊNCIA DE FISCALIZAÇÃO DE SERVIÇOS DE TRANSPORTE RODOVIÁRIO DE CARGAS E PASSAGEIROS'
         },
         {
           regex: /SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA/,
@@ -3638,6 +3722,8 @@
           /^SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO DE PASSAGEIROS$/.test(n) ||
           /^SUPERINTENDENCIA DE SERVICOS DE TRANSPORTE RODOVIARIO E MULTIMODAL DE CARGAS$/.test(n) ||
           /^SUPERINTENDENCIA DE TRANSPORTE FERROVIARIO$/.test(n) ||
+          /^SUPERINTENDENCIA DE FISCALIZACAO DE SERVICOS DE TRANSPORTE RODOVIARIO DE CARGAS E PASSAGEIROS$/.test(n) ||
+          /^SUPERINTENDENCIA DE FISCALIZACAO$/.test(n) ||
           /^SUPERINTENDENCIA DE GESTAO ADMINISTRATIVA$/.test(n) ||
           /^SUPERINTENDENCIA DE GOVERNANCA REGULATORIA$/.test(n) ||
           /^SUPERINTENDENCIA DE GOVERNANCA ESTRATEGICA E REGULATORIA$/.test(n) ||
