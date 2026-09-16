@@ -2527,6 +2527,106 @@
 
 
 
+    function reconstruirExtratoEncerramentoSecao3(item, textoBase) {
+      const secao = String(item?.secao || '');
+      const titulo =
+        normalizarRelevancia(
+          item?.cabecalho ||
+          item?.cabecalho_detectado ||
+          ''
+        );
+
+      if (
+        secao !== '3' ||
+        !/^EXTRATO DE ENCERRAMENTO\b/.test(titulo)
+      ) {
+        return textoBase;
+      }
+
+      const textoOriginal =
+        String(
+          window.textosDOU?.[secao] ||
+          window.textosDOU?.[Number(secao)] ||
+          ''
+        );
+
+      const inicio = Number(item?.posicao_inicio);
+
+      if (
+        !textoOriginal ||
+        !Number.isFinite(inicio) ||
+        inicio < 0
+      ) {
+        return textoBase;
+      }
+
+      /*
+        No DOU nº 175/2026, o Extrato de Encerramento do ACT nº 21/2019
+        continua depois de um bloco que pertence à outra coluna da página.
+        A leitura linear do PDF coloca "EXTRATO DE ACORDO DE COOPERAÇÃO
+        TÉCNICA Nº 52/2026" no meio do ato.
+
+        Procuramos o encerramento material do próprio Extrato:
+        "Fundamento Legal ... DATA DE ASSINATURA ... COORDENADOR GERAL".
+      */
+      const janela =
+        textoOriginal.substring(
+          inicio,
+          Math.min(
+            textoOriginal.length,
+            inicio + 45000
+          )
+        );
+
+      const janelaNorm =
+        normalizarRelevancia(janela);
+
+      const assinaturaFinal =
+        /FUNDAMENTO LEGAL\s*:\s*INSTRUCAO NORMATIVA IBAMA N[ºO]?\s*08\/2019[\s\S]{0,1800}?DATA DE ASSINATURA\s*:\s*09\/09\/2026[\s\S]{0,500}?LICEROS ALVES DOS REIS\s*-\s*COORDENADOR GERAL\.?/;
+
+      const matchFinal =
+        assinaturaFinal.exec(janelaNorm);
+
+      if (!matchFinal) {
+        return textoBase;
+      }
+
+      /*
+        Como normalizarRelevancia altera caracteres, não usamos o índice
+        normalizado para cortar o original. Localizamos a assinatura final
+        diretamente no texto original com uma regex tolerante.
+      */
+      const fimOriginalRegex =
+        /FUNDAMENTO\s+LEGAL\s*:\s*INSTRU[CÇ][AÃ]O\s+NORMATIVA\s+IBAMA\s+N[ºO°]?\s*08\/2019[\s\S]{0,1800}?DATA\s+DE\s+ASSINATURA\s*:\s*09\/09\/2026[\s\S]{0,500}?LICEROS\s+ALVES\s+DOS\s+REIS\s*-\s*COORDENADOR\s+GERAL\.?/i;
+
+      const fimMatch =
+        fimOriginalRegex.exec(janela);
+
+      if (!fimMatch) {
+        return textoBase;
+      }
+
+      let reconstruido =
+        janela.substring(
+          0,
+          fimMatch.index + fimMatch[0].length
+        );
+
+      /*
+        Retirar somente o ato que foi intercalado pela leitura em colunas:
+        EXTRATO DE ACORDO DE COOPERAÇÃO TÉCNICA Nº 52/2026.
+        A continuação "- Os Sistemas Rodoviários..." permanece.
+      */
+      reconstruido =
+        reconstruido.replace(
+          /EXTRATO\s+DE\s+ACORDO\s+DE\s+COOPERA[CÇ][AÃ]O\s+T[EÉ]CNICA\s+N[ºO°]?\s*52\/2026[\s\S]*?LICEROS\s+ALVES\s+DOS\s+REIS\s*-\s*COORDENADOR\s+GERAL\.?/i,
+          ''
+        );
+
+      return reconstruido.trim();
+    }
+
+
     function obterTextoOriginalDaPublicacaoParaAnalise(item) {
       const secao = String(item?.secao || '');
       const textoOriginal =
@@ -2589,7 +2689,13 @@
         fim = Math.min(textoOriginal.length, inicio + 30000);
       }
 
-      return textoOriginal.substring(inicio, fim);
+      const textoBase =
+        textoOriginal.substring(inicio, fim);
+
+      return reconstruirExtratoEncerramentoSecao3(
+        item,
+        textoBase
+      );
     }
 
     function classificarRelevanciaPublicacoes(
